@@ -58,7 +58,7 @@ BLAKE3/c/blake3_avx2_x86-64_unix.S BLAKE3/c/blake3_avx512_x86-64_unix.S
 
 echo "=========== compile test_hasher"
 g++ -std=c++11 -Wall -O3 -DTEST_HASHER_IMPL \
--I. -I.. -I BLAKE3/c \
+-I. -I../.. -I BLAKE3/c \
 ./*.o ./hasherimpl.cpp \
 -lcrypto \
 -o test_hasher
@@ -69,7 +69,23 @@ echo "=========== run test_hasher USE_BLAKE3"
 rm ./*.o
 time ./test_hasher
 }
+
+compile_use_blake3_vcpkg(){
+g++ -std=c++11 -Wall -O3 -DTEST_HASHER_IMPL -pthread \
+-I. -I../.. -I /opt/vcpkg/installed/x64-linux/include/ \
+-L /opt/vcpkg/installed/x64-linux/lib \
+./hasherimpl.cpp \
+-lcrypto -lblake3 \
+-o test_hasher
+
+# rm -rf BLAKE3
+echo "=========== run test_hasher USE_BLAKE3"
+# export LD_LIBRARY_PATH=.
+# rm ./*.o
+time ./test_hasher
+}
 # compile_openssl_ecc
 # compile_random_oracle_sha256
-compile_random_oracle_blake3
+# compile_random_oracle_blake3
+compile_use_blake3_vcpkg
 # compile_blake3

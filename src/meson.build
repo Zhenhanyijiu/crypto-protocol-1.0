@@ -1,7 +1,8 @@
 source_files = files(
   'tools/buffersocket.cpp',
   'tools/fulog.cpp',
-  'tools/tcpsocket.cpp',  
+  'tools/tcpsocket.cpp',
+  'hash/hasherimpl.cpp',  
 )
 
 crypto_lib = library('crypto_protocol',

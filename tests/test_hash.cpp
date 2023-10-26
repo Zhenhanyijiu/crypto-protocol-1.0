@@ -1,31 +1,8 @@
-#include "crypto-protocol/hasherimpl.h"
-namespace fucrypto {
-// openssl sha256
-sha256::sha256() { SHA256_Init(&this->c); }
-sha256::~sha256() {}
-void sha256::hasher_reset() { SHA256_Init(&this->c); }
-void sha256::hasher_update(const char *input, int input_len) {
-  SHA256_Update(&this->c, input, input_len);
-}
-void sha256::hasher_final(char *out, int out_len) {
-  SHA256_Final((unsigned char *)out, &c);
-}
-// blake3
-blake3::blake3() { blake3_hasher_init(&this->hasher); }
-blake3::~blake3() {}
-void blake3::hasher_reset() { blake3_hasher_reset(&this->hasher); }
-void blake3::hasher_update(const char *input, int input_len) {
-  blake3_hasher_update(&this->hasher, input, input_len);
-}
-void blake3::hasher_final(char *out, int out_len) {
-  blake3_hasher_finalize(&this->hasher, (uint8_t *)out, out_len);
-}
-}  // namespace fucrypto
-
 #include <stdio.h>
 #include <stdint.h>
 #include <bits/stdc++.h>
-#include <crypto-protocol/futime.h>
+#include "crypto-protocol/futime.h"
+#include "crypto-protocol/hasherimpl.h"
 using namespace fucrypto;
 using namespace std;
 void print_out(uint8_t *buf, int count) {
@@ -75,7 +52,7 @@ void test_hasher(int hash_type) {
   }
   uint64_t start_t = get_time_now<uint64_t>();
   //   oc::ROracle ro;
-  for (int i = 0; i < 1000000; i++) {
+  for (int i = 0; i < 10000000; i++) {
     hh->hasher_reset();
     hh->hasher_update((char *)buf, 32);
     char out[32];
@@ -85,8 +62,7 @@ void test_hasher(int hash_type) {
   float ret = get_use_time<float>(start_t, MS);
   cout << all_type[hash_type] << " use time:" << ret << " ms" << endl;
 }
-// #define TEST_HASHER_IMPL
-#ifdef TEST_HASHER_IMPL
+
 int main() {
   test_hasher(0);
   test_hasher(1);
@@ -94,4 +70,3 @@ int main() {
   //   test_hasher_check(1);
   return 0;
 }
-#endif

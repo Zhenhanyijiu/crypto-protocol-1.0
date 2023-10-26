@@ -2,7 +2,7 @@
 #define __FU_HASHER_IMPL_H__
 
 #include <openssl/sha.h>
-#include <BLAKE3/c/blake3.h>
+#include <blake3.h>
 #include "crypto-protocol/hasher.h"
 // #if defined(__cplusplus) || defined(c_plusplus)
 // extern "C" {
