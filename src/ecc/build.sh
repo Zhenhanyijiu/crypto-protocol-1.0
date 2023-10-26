@@ -6,7 +6,8 @@ compile_openssl_ecc()
 echo "=========== compile test_ecc"
 g++ -std=c++11 -Wall -O3 \
 -DECC_OPENSSL_TEST \
-./eccopenssl.cpp \
+-I ../../ \
+./eccopenssl.cpp ../../tests/test_eccopenssl.cpp \
 -lcrypto -o test_ecc
 echo "=========== run test_ecc"
 time ./test_ecc
@@ -84,8 +85,8 @@ echo "=========== run test_hasher USE_BLAKE3"
 # rm ./*.o
 time ./test_hasher
 }
-# compile_openssl_ecc
+compile_openssl_ecc
 # compile_random_oracle_sha256
 # compile_random_oracle_blake3
-compile_use_blake3_vcpkg
+# compile_use_blake3_vcpkg
 # compile_blake3

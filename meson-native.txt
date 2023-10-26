@@ -20,5 +20,5 @@ VCPKG_INSTALLED_DIR = vcpkg_installed_dir
 VCPKG_CRT_LINKAGE = 'dynamic'
 
 [built-in options]
-pkg_config_path = [ vcpkg_installed_dir + 'lib/pkgconfig:' + vcpkg_installed_dir + 'lib64/pkgconfig']
+pkg_config_path = [ vcpkg_installed_dir + 'lib/pkgconfig:' + vcpkg_installed_dir + 'lib64/pkgconfig:'+'/usr/lib64/pkgconfig']
 cmake_prefix_path = [ vcpkg_installed_dir ]
