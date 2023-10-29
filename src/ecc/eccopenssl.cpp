@@ -15,6 +15,10 @@
 #define ERR_POINT_INIT -11
 
 namespace fucrypto {
+void print_bigint_debug(const char *prefix, BigInt &a);
+void print_point_debug(const char *prefix, Point &a);
+void print_buffer_debug(const char *prefix, unsigned char *buf, int size);
+//
 int CurveMap[10] = {NID_secp256k1, NID_X9_62_prime256v1, NID_secp256k1,
                     NID_secp256k1, NID_secp256k1,        NID_secp256k1,
                     NID_secp256k1, NID_secp256k1,        NID_secp256k1,
@@ -205,6 +209,14 @@ Curve::Curve(int &err_no) {
     err_no = ERR_CURVE_INIT;
     return;
   }
+  BIGNUM *bn = BN_CTX_get(bn_ctx);
+  unsigned char to[64];
+  int nB = BN_bn2bin(bn, to);
+  for (size_t i = 0; i < nB; i++) {
+    printf("%2x", to[i]);
+  }
+  printf(" nB:%d\n", nB);
+
   this->scratch = new (std::nothrow) unsigned char[this->scratch_size];
   if (this->scratch == nullptr) {
     err_no = ERR_NEW;

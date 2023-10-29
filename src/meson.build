@@ -4,6 +4,7 @@ source_files = files(
   'tools/tcpsocket.cpp',
   'hash/hasherimpl.cpp',
   'ecc/eccopenssl.cpp',  
+  'ecc/fuecc_open.cpp',  
 )
 
 crypto_lib = library('crypto_protocol',
