@@ -1,6 +1,8 @@
 #include "crypto-protocol/fuecc_open.h"
 #include "crypto-protocol/fulog.h"
 #include <bits/stdc++.h>
+#include <openssl/obj_mac.h>
+
 using namespace std;
 namespace fucrypto {
 /****************** open_bn begin *******************/
@@ -25,51 +27,54 @@ static string get_bin_stream(const char* bg, int len) {
   return string(ss);
 }
 open_bn::open_bn() {
-  n = BN_new();
-  BN_zero(ptr(n));
-  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "addr init:{:p}", n);
+  _n = BN_new();
+  BN_zero(ptr(_n));
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "addr init:{:p}", _n);
 };
 open_bn::~open_bn() {
-  if (n) BN_free(ptr(n));
+  if (_n) {
+    BN_free(ptr(_n));
+    _n = nullptr;
+  }
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "~open_bn free");
 }
-int open_bn::set_one() { return BN_one(ptr(n)); }
-int open_bn::set_zero() { return BN_zero(ptr(n)); }
-int open_bn::set_long(long a) { return BN_set_word(ptr(n), (BN_ULONG)a); }
+int open_bn::set_one() { return BN_one(ptr(_n)); }
+int open_bn::set_zero() { return BN_zero(ptr(_n)); }
+int open_bn::set_long(long a) { return BN_set_word(ptr(_n), (BN_ULONG)a); }
 std::string open_bn::to_bin() {
   unsigned char to[64];
-  int n_bytes = BN_bn2bin(ptr(n), to);
+  int n_bytes = BN_bn2bin(ptr(_n), to);
   return string((char*)to, n_bytes);
 }
 std::string open_bn::to_hex() {
-  char* s = BN_bn2hex(ptr(n));
+  char* s = BN_bn2hex(ptr(_n));
   string ret(s);
   OPENSSL_free(s);
   return ret;
 }
 std::string open_bn::to_dec() {
-  char* s = BN_bn2dec(ptr(n));
+  char* s = BN_bn2dec(ptr(_n));
   string ret(s);
   OPENSSL_free(s);
   return ret;
 }
 int open_bn::from_bin(const char* bin, int len) {
-  printf("===1 n_ptr:%p\n", n);
-  n = BN_bin2bn((unsigned char*)bin, len, ptr(n));
-  printf("===2 n_ptr:%p\n", n);
+  printf("===1 n_ptr:%p\n", _n);
+  _n = BN_bin2bn((unsigned char*)bin, len, ptr(_n));
+  printf("===2 n_ptr:%p\n", _n);
   return 0;
 }
 int open_bn::from_hex(std::string hex) {
-  return BN_hex2bn((BIGNUM**)&n, hex.c_str());
+  return BN_hex2bn((BIGNUM**)&_n, hex.c_str());
 }
 int open_bn::from_dec(std::string dec) {
-  return BN_dec2bn((BIGNUM**)&n, dec.c_str());
+  return BN_dec2bn((BIGNUM**)&_n, dec.c_str());
 }
 int open_bn::cmp(const bigint* a, const bigint* b) {
-  return BN_cmp(ptr(a->n), ptr(b->n));
+  return BN_cmp(ptr(a->_n), ptr(b->_n));
 }
 void open_bn::print() {
-  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "bn address:{:p}", n);
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "bn address:{:p}", _n);
   //   cout << hex << "bn address:" << (uint64_t)n << endl;
   //   printf("bn address:%lld\n", (uint64_t)n);
   string hex = to_hex();
@@ -84,6 +89,116 @@ void open_bn::print() {
 }
 /****************** open_bn end *******************/
 
-/*************************************/
+/****************** open_ecc_point begin *******************/
+
+open_point::open_point(const curve* c) {
+  _open_c = (open_curve*)c;
+  _p = EC_POINT_new(_open_c->_ec_group);
+  if (!_p) _err_code = -1;
+};
+open_point::~open_point() {
+  if (_p) EC_POINT_free(_p);
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "~open_point free");
+};
+std::string open_point::to_bin() {
+  //   unsigned char buf[512];
+  //   size_t buf_len = 512;
+  char* pbuf = nullptr;
+  int ret =
+      EC_POINT_point2buf(_open_c->_ec_group, _p, POINT_CONVERSION_COMPRESSED,
+                         (unsigned char**)&pbuf, _open_c->_bn_ctx);
+  if (ret == 0) return "";
+  return string(pbuf, ret);
+};
+int open_point::from_bin(const char* bin, int len) {
+  int ret = EC_POINT_oct2point(_open_c->_ec_group, _p, (unsigned char*)bin, len,
+                               _open_c->_bn_ctx);
+  if (ret == 0) return -1;
+  return 0;
+};
+void open_point::print() {
+  string bin = to_bin();
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "bin:{},len:{}\n",
+                     get_bin_stream(bin.data(), bin.size()), bin.size());
+};
+
+/****************** open_ecc_point end *******************/
+/****************** open_ecc_curve start *******************/
+unordered_map<string, int> curve_map{
+    {"secp256k1", NID_secp256k1},
+    {"prime256v1", NID_X9_62_prime256v1},
+    {"secp384r1", NID_secp384r1},
+};
+open_curve::open_curve(int curve_id) {
+  int id = curve_map[_ecc_curve_list[0]];
+  _ec_group = EC_GROUP_new_by_curve_name(id);  // NIST P-256
+  _bn_ctx = BN_CTX_new();
+  _order = BN_new();
+  EC_GROUP_get_order(_ec_group, _order, _bn_ctx);
+  //   BIGNUM* bn = BN_CTX_get(_bn_ctx);
+  const EC_POINT* G_1 = EC_GROUP_get0_generator(_ec_group);
+  const EC_POINT* G_2 = EC_GROUP_get0_generator(_ec_group);
+  printf(">>> G_1:%p,G_2:%p\n", G_1, G_2);
+};
+open_curve::~open_curve() {
+  if (_ec_group) EC_GROUP_free(_ec_group);
+  if (_bn_ctx) BN_CTX_free(_bn_ctx);
+  if (_order) BN_free(_order);
+};
+std::unique_ptr<bigint> open_curve::gen_rand_bn() {
+  auto bn = make_unique<open_bn>();
+  BN_rand_range(ptr(bn->_n), _order);
+  return bn;
+};
+std::unique_ptr<bigint> open_curve::new_bn() { return make_unique<open_bn>(); };
+std::unique_ptr<point> open_curve::new_point() {
+  return make_unique<open_point>(this);
+};
+bool open_curve::is_on_curve(const point* p) {
+  auto pt = (open_point*)p;
+  return EC_POINT_is_on_curve(_ec_group, pt->_p, _bn_ctx);
+};
+std::unique_ptr<point> open_curve::add(const point* p1, const point* p2) {
+  auto p_a = (open_point*)p1;
+  auto p_b = (open_point*)p2;
+  auto ret = make_unique<open_point>(this);
+  int res = EC_POINT_add(_ec_group, ret->_p, p_a->_p, p_b->_p, _bn_ctx);
+  if (res) return ret;
+  return nullptr;
+};
+bool open_curve::add(const point* p1, point* p2) {
+  auto p_a = (open_point*)p1;
+  auto p_b = (open_point*)p2;
+  return EC_POINT_add(_ec_group, p_b->_p, p_a->_p, p_b->_p, _bn_ctx);
+};
+std::unique_ptr<point> open_curve::scalar_mul(const bigint* bn,
+                                              const point* p1) {
+  auto p_a = (open_point*)p1;
+  auto ret = make_unique<open_point>(this);
+  int res =
+      EC_POINT_mul(_ec_group, ret->_p, NULL, p_a->_p, ptr(bn->_n), _bn_ctx);
+  if (res) return ret;
+  return nullptr;
+};
+bool open_curve::scalar_mul(const bigint* bn, point* p1) {
+  auto p_a = (open_point*)p1;
+  int res =
+      EC_POINT_mul(_ec_group, p_a->_p, NULL, p_a->_p, ptr(bn->_n), _bn_ctx);
+  return res;
+};
+std::unique_ptr<point> open_curve::scalar_base_mul(const bigint* bn) {
+  auto ret = make_unique<open_point>(this);
+  int res = EC_POINT_mul(_ec_group, ret->_p, ptr(bn->_n), NULL, NULL, _bn_ctx);
+  if (res) return ret;
+  return nullptr;
+};
+std::unique_ptr<point> open_curve::get_generator() {
+  auto ret = make_unique<open_point>(this);
+  int res = EC_POINT_copy(ret->_p, EC_GROUP_get0_generator(_ec_group));
+  if (res) return ret;
+  return nullptr;
+};
+
+/****************** open_ecc_curve end *******************/
 
 }  // namespace fucrypto

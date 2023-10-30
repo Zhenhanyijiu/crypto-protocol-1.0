@@ -4,7 +4,7 @@ project('crypto-protocal', 'cpp',
     'buildtype=debug',
     #'buildtype=release',
     'default_library=static',
-    'cpp_std=c++11',
+    'cpp_std=c++14',
     'warning_level=3'],
   meson_version: '>=1.0.0')
 
