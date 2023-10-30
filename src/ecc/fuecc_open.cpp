@@ -29,8 +29,19 @@ static string get_bin_stream(const char* bg, int len) {
 open_bn::open_bn() {
   _n = BN_new();
   BN_zero(ptr(_n));
-  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "addr init:{:p}", _n);
+  //   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "addr init:{:p}", _n);
 };
+open_bn::open_bn(open_bn&& n) {
+  _n = n._n;
+  n._n = nullptr;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "open_bn 移动构造:{:p}", _n);
+}
+open_bn& open_bn::operator=(open_bn&& n) {
+  _n = n._n;
+  n._n = nullptr;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "open_bn 移动赋值:{:p}", _n);
+  return *this;
+}
 open_bn::~open_bn() {
   if (_n) {
     BN_free(ptr(_n));
@@ -42,7 +53,7 @@ int open_bn::set_one() { return BN_one(ptr(_n)); }
 int open_bn::set_zero() { return BN_zero(ptr(_n)); }
 int open_bn::set_long(long a) { return BN_set_word(ptr(_n), (BN_ULONG)a); }
 std::string open_bn::to_bin() {
-  unsigned char to[64];
+  unsigned char to[512];
   int n_bytes = BN_bn2bin(ptr(_n), to);
   return string((char*)to, n_bytes);
 }
@@ -84,7 +95,7 @@ void open_bn::print() {
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "dec:{},len:{}", dec,
                      dec.size());
   string bin = to_bin();
-  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "bin:{},len:{}\n",
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "bin:{},len:{}",
                      get_bin_stream(bin.data(), bin.size()), bin.size());
 }
 /****************** open_bn end *******************/
@@ -118,7 +129,7 @@ int open_point::from_bin(const char* bin, int len) {
 };
 void open_point::print() {
   string bin = to_bin();
-  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "bin:{},len:{}\n",
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "bin:{},len:{}",
                      get_bin_stream(bin.data(), bin.size()), bin.size());
 };
 
@@ -130,7 +141,8 @@ unordered_map<string, int> curve_map{
     {"secp384r1", NID_secp384r1},
 };
 open_curve::open_curve(int curve_id) {
-  int id = curve_map[_ecc_curve_list[0]];
+  _curve_name = _ecc_curve_list[curve_id];
+  int id = curve_map[_curve_name];
   _ec_group = EC_GROUP_new_by_curve_name(id);  // NIST P-256
   _bn_ctx = BN_CTX_new();
   _order = BN_new();
@@ -138,12 +150,14 @@ open_curve::open_curve(int curve_id) {
   //   BIGNUM* bn = BN_CTX_get(_bn_ctx);
   const EC_POINT* G_1 = EC_GROUP_get0_generator(_ec_group);
   const EC_POINT* G_2 = EC_GROUP_get0_generator(_ec_group);
-  printf(">>> G_1:%p,G_2:%p\n", G_1, G_2);
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), ">>>{}: G_1:{},G_2:{}",
+                     _curve_name, (uint64_t)G_1, (uint64_t)G_2);
 };
 open_curve::~open_curve() {
   if (_ec_group) EC_GROUP_free(_ec_group);
   if (_bn_ctx) BN_CTX_free(_bn_ctx);
   if (_order) BN_free(_order);
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "~open_curve free");
 };
 std::unique_ptr<bigint> open_curve::gen_rand_bn() {
   auto bn = make_unique<open_bn>();

@@ -41,6 +41,7 @@ class point {
 class curve {
  public:
   std::string _ecc_curve_list[512] = {"secp256k1", "prime256v1", "secp384r1"};
+  std::string _curve_name;
 
  public:
   virtual ~curve(){};

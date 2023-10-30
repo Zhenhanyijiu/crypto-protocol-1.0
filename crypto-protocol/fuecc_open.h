@@ -12,6 +12,9 @@ class open_bn : public bigint {
  public:
   open_bn();
   open_bn(const open_bn& n) = delete;
+  open_bn(open_bn&& n);
+  open_bn& operator=(const open_bn& n) = delete;
+  open_bn& operator=(open_bn&& n);
   ~open_bn();
   int set_one();
   int set_zero();

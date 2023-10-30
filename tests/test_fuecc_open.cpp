@@ -1,4 +1,5 @@
 #include "crypto-protocol/fuecc_open.h"
+#include "crypto-protocol/fulog.h"
 #include <bits/stdc++.h>
 using namespace std;
 using namespace fucrypto;
@@ -33,9 +34,56 @@ void test_check_open_bn() {
   p->from_bin((char*)bin, 8);
   p->print();
 }
+
+void test_curve_gen_rand_bn() {
+  cout << endl;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "========= test curve gen_rand_bn");
+  open_curve op_cur(0);
+  auto rand_bn1 = op_cur.gen_rand_bn();
+  rand_bn1->print();
+  //   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "获取生成元 G");
+  //   auto G = op_cur.get_generator();
+  //   G->print();
+  //   cout << endl;
+}
+
+void test_curve_new_bn() {
+  cout << endl;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "========= test curve new_bn");
+  open_curve op_cur(0);
+  auto rand_bn1 = op_cur.new_bn();
+  rand_bn1->print();
+  rand_bn1->from_dec("-1000");
+  rand_bn1->print();
+  //   cout << endl;
+}
+
+void test_curve_new_point() {
+  cout << endl;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "========= test curve new_point");
+  open_curve op_cur(0);
+  auto rand_bn1 = op_cur.new_point();
+  rand_bn1->print();
+}
+void test_curve_get_generator() {
+  cout << endl;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "========= test curve get_generator");
+  open_curve op_cur(0);
+  auto G = op_cur.get_generator();
+  G->print();
+  auto bin = G->to_bin();
+  auto new_point = op_cur.new_point();
+}
 int main(int argc, char** argv) {
   cout << "======= test ecc_open ========" << endl;
+  spdlog_set_level("info");
   //   test_print_open_bn();
-  test_check_open_bn();
+  //   test_check_open_bn();
+  test_curve_gen_rand_bn();
+  test_curve_new_bn();
+  test_curve_new_point();
   return 0;
 }
