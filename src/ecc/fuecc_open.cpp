@@ -141,6 +141,9 @@ unordered_map<string, int> curve_map{
     {"secp384r1", NID_secp384r1},
 };
 open_curve::open_curve(int curve_id) {
+  if (curve_id >= _curve_num || curve_id < 0) {
+    curve_id = 0;
+  }
   _curve_name = _ecc_curve_list[curve_id];
   int id = curve_map[_curve_name];
   _ec_group = EC_GROUP_new_by_curve_name(id);  // NIST P-256

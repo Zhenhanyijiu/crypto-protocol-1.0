@@ -216,6 +216,33 @@ void test_curve_set_to_infinity() {
   c->set_to_infinity(p1.get());
   p1->print();
 }
+void test_curve_openssl_factory() {
+  cout << endl;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "========= test_curve_openssl_factory");
+  EccLibFactory* openssl = (*ecc_lib_map)["openssl"];
+  auto cv = openssl->new_curve(0);
+  auto bn1 = cv->gen_rand_bn();
+  bn1->print();
+  auto bn2 = cv->new_bn();
+  bn2->from_dec("2");
+  bn2->print();
+  auto p1 = cv->scalar_base_mul(bn2.get());
+  p1->print();
+  bn2->from_dec("20");
+  auto p2 = cv->scalar_mul_const(bn2.get(), p1.get());
+  p2->print();
+  bn2->from_dec("40");
+  auto p3 = cv->scalar_base_mul(bn2.get());
+  bool fg = cv->equal(p2.get(), p3.get());
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "equal:{}", fg);
+  auto p3_inv = cv->inv_const(p3.get());
+  bn2->from_dec("-1");
+  auto p3_inv2 = cv->scalar_mul_const(bn2.get(), p3.get());
+
+  bool fg2 = cv->equal(p3_inv.get(), p3_inv2.get());
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "inv equal:{}", fg2);
+}
 int main(int argc, char** argv) {
   cout << "======= test ecc_open ========" << endl;
   spdlog_set_level("info");
@@ -232,5 +259,6 @@ int main(int argc, char** argv) {
   test_curve_inv_const();
   test_curve_inv();
   test_curve_set_to_infinity();
+  test_curve_openssl_factory();
   return 0;
 }
