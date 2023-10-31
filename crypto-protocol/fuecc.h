@@ -63,7 +63,19 @@ class curve {
   virtual bool inv(point* p) = 0;
   virtual std::unique_ptr<point> copy(const point* p) = 0;
   virtual bool copy(const point* p, point* dst) = 0;
+  virtual bool equal(const point* p, const point* q) = 0;
+  virtual bool is_at_infinity(const point* p) = 0;
+  virtual bool set_to_infinity(point* p) = 0;
 };
 
+class EccLibFactory {
+ private:
+  std::string _ecc_lib_list[512] = {"openssl", "relic"};
+
+ public:
+  virtual ~EccLibFactory() { printf("[info]~EccLibFactory free"); };
+  virtual std::unique_ptr<curve> new_curve(int curve_id) = 0;
+};
+extern std::unordered_map<std::string, EccLibFactory*>* ecc_lib_map;
 }  // namespace fucrypto
 #endif

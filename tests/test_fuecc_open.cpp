@@ -85,7 +85,10 @@ void test_curve_get_generator() {
     SPDLOG_LOGGER_INFO(spdlog::default_logger(), "not on curve");
 }
 
-void test_curve_add_const_p1_p2() {
+void test_curve_add_const() {
+  cout << endl;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "========= test_curve_add_const");
   open_curve open_cvr(0);
   curve* c = &open_cvr;
   auto k1 = c->new_bn();
@@ -96,6 +99,123 @@ void test_curve_add_const_p1_p2() {
   unique_ptr<point> P2 = c->add_const(G.get(), G.get());
   P2->print();
 }
+
+void test_curve_add() {
+  cout << endl;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "========= test_curve_add");
+  open_curve open_cvr(0);
+  curve* c = &open_cvr;
+  auto k1 = c->new_bn();
+  k1->from_dec("2");
+  auto G = c->get_generator();
+  auto P1 = c->scalar_base_mul(k1.get());  // p1=2G
+  P1->print();
+  bool fg = c->add(G.get(), P1.get());
+  if (fg) SPDLOG_LOGGER_INFO(spdlog::default_logger(), "fg:{}", fg);
+  P1->print();
+  k1->from_dec("3");
+  auto P2 = c->scalar_base_mul(k1.get());  // p1=3G
+  P2->print();
+  bool fg2 = c->equal(P2.get(), P1.get());
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "equal:{}", fg2);
+}
+void test_curve_scalar_mul_const() {
+  cout << endl;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "========= test_curve_scalar_mul_const");
+  open_curve open_cvr(0);
+  curve* c = &open_cvr;
+  auto k1 = c->new_bn();
+  k1->from_dec("2");
+  auto G = c->get_generator();
+  auto P1 = c->scalar_base_mul(k1.get());  // p1=2G
+  k1->from_dec("3");
+  auto P2 = c->scalar_mul_const(k1.get(), P1.get());  // p2=3*p1
+  P2->print();
+  k1->from_dec("6");
+  unique_ptr<point> P3 = c->scalar_base_mul(k1.get());  // p3=6*G
+  P3->print();
+  bool fg = c->equal(P2.get(), P3.get());
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "equal:{}", fg);
+}
+
+void test_curve_scalar_mul() {
+  cout << endl;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "========= test_curve_scalar_mul");
+  open_curve open_cvr(0);
+  curve* c = &open_cvr;
+  auto k1 = c->new_bn();
+  k1->from_dec("2");
+  auto G = c->get_generator();
+  auto P1 = c->scalar_base_mul(k1.get());  // p1=2G
+  P1->print();
+  k1->from_dec("4");
+  bool fg = c->scalar_mul(k1.get(), P1.get());  // p2=8*G
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "mul:{}", fg);
+  P1->print();
+  k1->from_dec("8");
+  auto P2 = c->scalar_base_mul(k1.get());  // p2=8G
+  P2->print();
+  bool fg2 = c->equal(P2.get(), P1.get());
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "equal:{}", fg2);
+}
+
+void test_curve_inv_const() {
+  cout << endl;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "========= test_curve_inv_const");
+  open_curve open_cvr(0);
+  curve* c = &open_cvr;
+  auto k1 = c->new_bn();
+  k1->from_dec("2");
+  auto G = c->get_generator();
+  auto p1 = c->scalar_base_mul(k1.get());  // p1=2G
+  p1->print();
+  unique_ptr<point> p1_inv = c->inv_const(p1.get());
+  p1_inv->print();
+  auto O_inf = c->add_const(p1.get(), p1_inv.get());
+  O_inf->print();
+  bool fg = false;
+  fg = c->is_at_infinity(O_inf.get());
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "is_at_infinity:{}", fg);
+}
+
+void test_curve_inv() {
+  cout << endl;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "========= test_curve_inv");
+  open_curve open_cvr(0);
+  curve* c = &open_cvr;
+  auto k1 = c->new_bn();
+  k1->from_dec("5");
+  auto G = c->get_generator();
+  auto p1 = c->scalar_base_mul(k1.get());  // p1=5G
+  p1->print();
+  c->copy(p1.get(), G.get());
+  G->print();
+  c->inv(p1.get());
+  p1->print();
+  auto O_inf = c->add_const(p1.get(), G.get());
+  O_inf->print();
+  bool fg = false;
+  fg = c->is_at_infinity(O_inf.get());
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "is_at_infinity:{}", fg);
+}
+
+void test_curve_set_to_infinity() {
+  cout << endl;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "========= test_curve_set_to_infinity");
+  open_curve open_cvr(0);
+  curve* c = &open_cvr;
+  auto k1 = c->new_bn();
+  k1->from_dec("5");
+  auto G = c->get_generator();
+  auto p1 = c->scalar_base_mul(k1.get());  // p1=5G
+  p1->print();
+  c->set_to_infinity(p1.get());
+  p1->print();
+}
 int main(int argc, char** argv) {
   cout << "======= test ecc_open ========" << endl;
   spdlog_set_level("info");
@@ -105,6 +225,12 @@ int main(int argc, char** argv) {
   test_curve_new_bn();
   test_curve_new_point();
   test_curve_get_generator();
-  test_curve_add_const_p1_p2();
+  test_curve_add_const();
+  test_curve_add();
+  test_curve_scalar_mul_const();
+  test_curve_scalar_mul();
+  test_curve_inv_const();
+  test_curve_inv();
+  test_curve_set_to_infinity();
   return 0;
 }

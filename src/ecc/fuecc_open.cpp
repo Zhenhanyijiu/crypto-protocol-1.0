@@ -240,6 +240,35 @@ bool open_curve::copy(const point* p, point* dst) {
   if (fg) return true;
   return false;
 }
-/****************** open_ecc_curve end *******************/
 
+bool open_curve::equal(const point* p, const point* q) {
+  open_point *pa = (open_point*)p, *pb = (open_point*)q;
+  //   1 if the points are not equal, 0 if they are, or -1 on error
+  int fg = EC_POINT_cmp(_ec_group, pa->_p, pb->_p, _bn_ctx);
+  return fg == 0 ? true : false;
+}
+bool open_curve::is_at_infinity(const point* p) {
+  open_point* pa = (open_point*)p;
+  int fg = EC_POINT_is_at_infinity(_ec_group, pa->_p);
+  return fg;
+};
+bool open_curve::set_to_infinity(point* p) {
+  open_point* pa = (open_point*)p;
+  int fg = EC_POINT_set_to_infinity(_ec_group, pa->_p);
+  return fg ? true : false;
+};
+/****************** open_ecc_curve end *******************/
+class openssl_factory : public EccLibFactory {
+ private:
+  /* data */
+ public:
+  openssl_factory(){};
+  ~openssl_factory() { cout << "[info]~openssl_factory" << endl; };
+  std::unique_ptr<curve> new_curve(int curve_id) {
+    return make_unique<open_curve>(curve_id);
+  };
+};
+openssl_factory openssl_lib_factory;
+// EccLibFactory* get_openssl_factory_ptr() { return new openssl_factory; };
+EccLibFactory* openssl_factory_ptr = &openssl_lib_factory;
 }  // namespace fucrypto
