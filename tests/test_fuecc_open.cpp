@@ -76,6 +76,25 @@ void test_curve_get_generator() {
   G->print();
   auto bin = G->to_bin();
   auto new_point = op_cur.new_point();
+  new_point->from_bin(bin.data(), bin.size());
+  new_point->print();
+  bool fg = op_cur.is_on_curve(new_point.get());
+  if (fg)
+    SPDLOG_LOGGER_INFO(spdlog::default_logger(), "on curve ok");
+  else
+    SPDLOG_LOGGER_INFO(spdlog::default_logger(), "not on curve");
+}
+
+void test_curve_add_const_p1_p2() {
+  open_curve open_cvr(0);
+  curve* c = &open_cvr;
+  auto k1 = c->new_bn();
+  k1->from_dec("2");
+  auto G = c->get_generator();
+  auto P1 = c->scalar_base_mul(k1.get());  // p1=2G
+  P1->print();
+  unique_ptr<point> P2 = c->add_const(G.get(), G.get());
+  P2->print();
 }
 int main(int argc, char** argv) {
   cout << "======= test ecc_open ========" << endl;
@@ -85,5 +104,7 @@ int main(int argc, char** argv) {
   test_curve_gen_rand_bn();
   test_curve_new_bn();
   test_curve_new_point();
+  test_curve_get_generator();
+  test_curve_add_const_p1_p2();
   return 0;
 }

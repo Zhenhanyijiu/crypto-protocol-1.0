@@ -172,7 +172,7 @@ bool open_curve::is_on_curve(const point* p) {
   auto pt = (open_point*)p;
   return EC_POINT_is_on_curve(_ec_group, pt->_p, _bn_ctx);
 };
-std::unique_ptr<point> open_curve::add(const point* p1, const point* p2) {
+std::unique_ptr<point> open_curve::add_const(const point* p1, const point* p2) {
   auto p_a = (open_point*)p1;
   auto p_b = (open_point*)p2;
   auto ret = make_unique<open_point>(this);
@@ -185,8 +185,8 @@ bool open_curve::add(const point* p1, point* p2) {
   auto p_b = (open_point*)p2;
   return EC_POINT_add(_ec_group, p_b->_p, p_a->_p, p_b->_p, _bn_ctx);
 };
-std::unique_ptr<point> open_curve::scalar_mul(const bigint* bn,
-                                              const point* p1) {
+std::unique_ptr<point> open_curve::scalar_mul_const(const bigint* bn,
+                                                    const point* p1) {
   auto p_a = (open_point*)p1;
   auto ret = make_unique<open_point>(this);
   int res =
@@ -212,7 +212,34 @@ std::unique_ptr<point> open_curve::get_generator() {
   if (res) return ret;
   return nullptr;
 };
-
+std::unique_ptr<point> open_curve::inv_const(const point* p) {
+  auto p_a = (open_point*)p;
+  auto ret = make_unique<open_point>(this);
+  int fg = EC_POINT_copy(ret->_p, p_a->_p);
+  if (!fg) return nullptr;
+  fg = EC_POINT_invert(_ec_group, ret->_p, _bn_ctx);
+  if (fg) return ret;
+  return nullptr;
+};
+bool open_curve::inv(point* p) {
+  auto p_a = (open_point*)p;
+  int fg = EC_POINT_invert(_ec_group, p_a->_p, _bn_ctx);
+  return fg ? true : false;
+}
+std::unique_ptr<point> open_curve::copy(const point* p) {
+  auto p_a = (open_point*)p;
+  auto ret = make_unique<open_point>(this);
+  int fg = EC_POINT_copy(ret->_p, p_a->_p);
+  if (fg) return ret;
+  return nullptr;
+}
+bool open_curve::copy(const point* p, point* dst) {
+  auto p_a = (open_point*)p;
+  auto p_d = (open_point*)dst;
+  int fg = EC_POINT_copy(p_d->_p, p_a->_p);
+  if (fg) return true;
+  return false;
+}
 /****************** open_ecc_curve end *******************/
 
 }  // namespace fucrypto

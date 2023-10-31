@@ -60,12 +60,16 @@ class open_curve : public curve {
   std::unique_ptr<bigint> new_bn();
   std::unique_ptr<point> new_point();
   bool is_on_curve(const point* p);
-  std::unique_ptr<point> add(const point* p1, const point* p2);
+  std::unique_ptr<point> add_const(const point* p1, const point* p2);
   bool add(const point* p1, point* p2);
-  std::unique_ptr<point> scalar_mul(const bigint* bn, const point* p1);
+  std::unique_ptr<point> scalar_mul_const(const bigint* bn, const point* p1);
   bool scalar_mul(const bigint* bn, point* p1);
   std::unique_ptr<point> scalar_base_mul(const bigint* bn);
   std::unique_ptr<point> get_generator();
+  std::unique_ptr<point> inv_const(const point* p);
+  bool inv(point* p);
+  std::unique_ptr<point> copy(const point* p);
+  bool copy(const point* p, point* dst);
 };
 }  // namespace fucrypto
 
