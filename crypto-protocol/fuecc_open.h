@@ -40,7 +40,11 @@ class open_point : public point {
   open_point(const open_point&) = delete;
   ~open_point();
   std::string to_bin();
+  std::string to_hex();
+  std::unique_ptr<bigint> to_bn();
   int from_bin(const char* bin, int len);
+  int from_hex(const char* hex);
+  int from_bn(const bigint* bn);
   void print();
   //   bool add(const point* p1, const point* p2, point* res, void* ctx);
   //   bool add(const point* p1, point* p2, void* ctx);
@@ -54,7 +58,7 @@ class open_curve : public curve {
   BIGNUM* _order = nullptr;
   //
   open_curve() = delete;
-  open_curve(int curve_id);
+  open_curve(string curve_name);
   ~open_curve();
   std::unique_ptr<bigint> gen_rand_bn();
   std::unique_ptr<bigint> new_bn();

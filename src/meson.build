@@ -16,7 +16,8 @@ source_files = files(
   'hash/hasherimpl.cpp',
   'ecc/eccopenssl.cpp',  
   'ecc/fuecc_open.cpp',  
-  'ecc/fuecc.cpp',  
+  'ecc/fuecc.cpp',
+  'ot/base.cpp',  
 )
 
 crypto_lib = library('crypto_protocol',

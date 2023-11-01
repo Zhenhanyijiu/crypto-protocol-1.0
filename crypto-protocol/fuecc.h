@@ -29,7 +29,11 @@ class point {
   //
   virtual ~point(){};
   virtual std::string to_bin() = 0;
+  virtual std::string to_hex() = 0;
+  virtual std::unique_ptr<bigint> to_bn() = 0;
   virtual int from_bin(const char* bin, int len) = 0;
+  virtual int from_hex(const char* hex) = 0;
+  virtual int from_bn(const bigint* bn) = 0;
   virtual void print() = 0;
   //   virtual bool add(const point* p1, const point* p2, point* res, void* ctx)
   //   = 0; virtual bool add(const point* p1, point* p2, void* ctx) = 0; virtual
@@ -40,11 +44,17 @@ class point {
 
 class curve {
  public:
-  std::string _ecc_curve_list[512] = {"secp256k1", "prime256v1", "secp384r1"};
+  std::string _ecc_curve_list[512] = {
+      "secp256k1",
+      "prime256v1",
+      "secp384r1",
+  };
   std::string _curve_name;
-  int _curve_num = 3;
+  //   int _curve_num = 3;
 
  public:
+  curve() { _curve_name = "secp256k1"; };
+  curve(std::string curve_name) { _curve_name = curve_name; };
   virtual ~curve(){};
   virtual std::unique_ptr<bigint> gen_rand_bn() = 0;
   virtual std::unique_ptr<bigint> new_bn() = 0;
@@ -74,8 +84,8 @@ class EccLibFactory {
   std::string _ecc_lib_list[512] = {"openssl", "relic"};
 
  public:
-  virtual ~EccLibFactory() { printf("[info]~EccLibFactory free"); };
-  virtual std::unique_ptr<curve> new_curve(int curve_id) = 0;
+  virtual ~EccLibFactory() { printf("[info]~EccLibFactory free\n"); };
+  virtual std::unique_ptr<curve> new_curve(std::string curve_name) = 0;
 };
 extern std::unordered_map<std::string, EccLibFactory*>* ecc_lib_map;
 }  // namespace fucrypto

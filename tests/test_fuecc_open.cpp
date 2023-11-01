@@ -35,11 +35,11 @@ void test_check_open_bn() {
   p->print();
 }
 
-void test_curve_gen_rand_bn() {
+void test_curve_gen_rand_bn(string curve_name) {
   cout << endl;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "========= test curve gen_rand_bn");
-  open_curve op_cur(0);
+  open_curve op_cur(curve_name);
   auto rand_bn1 = op_cur.gen_rand_bn();
   rand_bn1->print();
   //   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "获取生成元 G");
@@ -48,10 +48,10 @@ void test_curve_gen_rand_bn() {
   //   cout << endl;
 }
 
-void test_curve_new_bn() {
+void test_curve_new_bn(string curve_name) {
   cout << endl;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "========= test curve new_bn");
-  open_curve op_cur(0);
+  open_curve op_cur(curve_name);
   auto rand_bn1 = op_cur.new_bn();
   rand_bn1->print();
   rand_bn1->from_dec("-1000");
@@ -59,19 +59,19 @@ void test_curve_new_bn() {
   //   cout << endl;
 }
 
-void test_curve_new_point() {
+void test_curve_new_point(string curve_name) {
   cout << endl;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "========= test curve new_point");
-  open_curve op_cur(0);
+  open_curve op_cur(curve_name);
   auto rand_bn1 = op_cur.new_point();
   rand_bn1->print();
 }
-void test_curve_get_generator() {
+void test_curve_get_generator(string curve_name) {
   cout << endl;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "========= test curve get_generator");
-  open_curve op_cur(0);
+  open_curve op_cur(curve_name);
   auto G = op_cur.get_generator();
   G->print();
   auto bin = G->to_bin();
@@ -85,11 +85,11 @@ void test_curve_get_generator() {
     SPDLOG_LOGGER_INFO(spdlog::default_logger(), "not on curve");
 }
 
-void test_curve_add_const() {
+void test_curve_add_const(string curve_name) {
   cout << endl;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "========= test_curve_add_const");
-  open_curve open_cvr(0);
+  open_curve open_cvr(curve_name);
   curve* c = &open_cvr;
   auto k1 = c->new_bn();
   k1->from_dec("2");
@@ -100,10 +100,10 @@ void test_curve_add_const() {
   P2->print();
 }
 
-void test_curve_add() {
+void test_curve_add(string curve_name) {
   cout << endl;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "========= test_curve_add");
-  open_curve open_cvr(0);
+  open_curve open_cvr(curve_name);
   curve* c = &open_cvr;
   auto k1 = c->new_bn();
   k1->from_dec("2");
@@ -119,11 +119,11 @@ void test_curve_add() {
   bool fg2 = c->equal(P2.get(), P1.get());
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "equal:{}", fg2);
 }
-void test_curve_scalar_mul_const() {
+void test_curve_scalar_mul_const(string curve_name) {
   cout << endl;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "========= test_curve_scalar_mul_const");
-  open_curve open_cvr(0);
+  open_curve open_cvr(curve_name);
   curve* c = &open_cvr;
   auto k1 = c->new_bn();
   k1->from_dec("2");
@@ -139,11 +139,11 @@ void test_curve_scalar_mul_const() {
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "equal:{}", fg);
 }
 
-void test_curve_scalar_mul() {
+void test_curve_scalar_mul(string curve_name) {
   cout << endl;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "========= test_curve_scalar_mul");
-  open_curve open_cvr(0);
+  open_curve open_cvr(curve_name);
   curve* c = &open_cvr;
   auto k1 = c->new_bn();
   k1->from_dec("2");
@@ -161,11 +161,11 @@ void test_curve_scalar_mul() {
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "equal:{}", fg2);
 }
 
-void test_curve_inv_const() {
+void test_curve_inv_const(string curve_name) {
   cout << endl;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "========= test_curve_inv_const");
-  open_curve open_cvr(0);
+  open_curve open_cvr(curve_name);
   curve* c = &open_cvr;
   auto k1 = c->new_bn();
   k1->from_dec("2");
@@ -181,10 +181,10 @@ void test_curve_inv_const() {
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "is_at_infinity:{}", fg);
 }
 
-void test_curve_inv() {
+void test_curve_inv(string curve_name) {
   cout << endl;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "========= test_curve_inv");
-  open_curve open_cvr(0);
+  open_curve open_cvr(curve_name);
   curve* c = &open_cvr;
   auto k1 = c->new_bn();
   k1->from_dec("5");
@@ -202,11 +202,11 @@ void test_curve_inv() {
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "is_at_infinity:{}", fg);
 }
 
-void test_curve_set_to_infinity() {
+void test_curve_set_to_infinity(string curve_name) {
   cout << endl;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "========= test_curve_set_to_infinity");
-  open_curve open_cvr(0);
+  open_curve open_cvr(curve_name);
   curve* c = &open_cvr;
   auto k1 = c->new_bn();
   k1->from_dec("5");
@@ -216,12 +216,12 @@ void test_curve_set_to_infinity() {
   c->set_to_infinity(p1.get());
   p1->print();
 }
-void test_curve_openssl_factory() {
+void test_curve_openssl_factory(string curve_name) {
   cout << endl;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "========= test_curve_openssl_factory");
   EccLibFactory* openssl = (*ecc_lib_map)["openssl"];
-  auto cv = openssl->new_curve(0);
+  auto cv = openssl->new_curve(curve_name);
   auto bn1 = cv->gen_rand_bn();
   bn1->print();
   auto bn2 = cv->new_bn();
@@ -243,22 +243,83 @@ void test_curve_openssl_factory() {
   bool fg2 = cv->equal(p3_inv.get(), p3_inv2.get());
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "inv equal:{}", fg2);
 }
+
+void test_curve_open_point_2hex(string curve_name) {
+  cout << endl;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "========= test_curve_open_point_2hex");
+  EccLibFactory* openssl = (*ecc_lib_map)["openssl"];
+  auto cv = openssl->new_curve(curve_name);
+  auto bn1 = cv->new_bn();
+  bn1->from_dec("11111");
+  bn1->print();
+  auto bn2 = cv->new_bn();
+  unsigned char buf[2] = {0x2b, 0x67};
+  bn2->from_bin((char*)buf, 2);
+  bn2->print();
+  bn1->from_dec("2");
+  auto p1 = cv->scalar_base_mul(bn1.get());
+  p1->print();
+  auto p2 = cv->new_point();
+  p2->from_hex(p1->to_hex().c_str());
+  p2->print();
+}
+
+void test_curve_open_point_2bn(string curve_name) {
+  cout << endl;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "========= test_curve_open_point_2bn");
+  EccLibFactory* openssl = (*ecc_lib_map)["openssl"];
+  auto cv = openssl->new_curve(curve_name);
+  auto bn1 = cv->new_bn();
+  bn1->from_dec("11111");
+  bn1->print();
+  auto p1 = cv->scalar_base_mul(bn1.get());
+  cout << ">>> print point:" << endl;
+  p1->print();
+  cout << ">>> to_bn1:" << endl;
+  auto to_bn1 = p1->to_bn();
+  to_bn1->print();
+  cout << ">>> debug from bn:" << endl;
+  auto p2 = cv->new_point();
+  auto r_bn = cv->gen_rand_bn();
+  r_bn->print();
+  int fg = p2->from_bn(r_bn.get());
+  cout << ">>> fg:" << fg << endl;
+  p2->print();
+
+  //   auto p2 = cv->new_point();
+  //   p2->from_hex(p1->to_hex().c_str());
+  //   p2->print();
+}
+
 int main(int argc, char** argv) {
   cout << "======= test ecc_open ========" << endl;
   spdlog_set_level("info");
   //   test_print_open_bn();
   //   test_check_open_bn();
-  test_curve_gen_rand_bn();
-  test_curve_new_bn();
-  test_curve_new_point();
-  test_curve_get_generator();
-  test_curve_add_const();
-  test_curve_add();
-  test_curve_scalar_mul_const();
-  test_curve_scalar_mul();
-  test_curve_inv_const();
-  test_curve_inv();
-  test_curve_set_to_infinity();
-  test_curve_openssl_factory();
+  vector<string> curve_lists = {
+      "secp256k1",
+      "prime256v1",
+      "secp384r1",
+  };
+  //   for (size_t i = 0; i < curve_lists.size(); i++) {
+  for (size_t i = 0; i < 1; i++) {
+    test_curve_gen_rand_bn(curve_lists[i]);
+    test_curve_new_bn(curve_lists[i]);
+    test_curve_new_point(curve_lists[i]);
+    test_curve_get_generator(curve_lists[i]);
+    test_curve_add_const(curve_lists[i]);
+    test_curve_add(curve_lists[i]);
+    test_curve_scalar_mul_const(curve_lists[i]);
+    test_curve_scalar_mul(curve_lists[i]);
+    test_curve_inv_const(curve_lists[i]);
+    test_curve_inv(curve_lists[i]);
+    test_curve_set_to_infinity(curve_lists[i]);
+    test_curve_openssl_factory(curve_lists[i]);
+    test_curve_open_point_2hex(curve_lists[i]);
+    test_curve_open_point_2bn(curve_lists[i]);
+  }
+
   return 0;
 }

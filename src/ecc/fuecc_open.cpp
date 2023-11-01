@@ -71,9 +71,9 @@ std::string open_bn::to_dec() {
 }
 int open_bn::from_bin(const char* bin, int len) {
   printf("===1 n_ptr:%p\n", _n);
-  _n = BN_bin2bn((unsigned char*)bin, len, ptr(_n));
-  printf("===2 n_ptr:%p\n", _n);
-  return 0;
+  auto res = BN_bin2bn((unsigned char*)bin, len, ptr(_n));
+  printf("===2 res:%p,_n:%p\n", res, ptr(_n));
+  return res ? 0 : -1;
 }
 int open_bn::from_hex(std::string hex) {
   return BN_hex2bn((BIGNUM**)&_n, hex.c_str());
@@ -121,16 +121,47 @@ std::string open_point::to_bin() {
   if (ret == 0) return "";
   return string(pbuf, ret);
 };
+std::string open_point::to_hex() {
+  char* res = EC_POINT_point2hex(_open_c->_ec_group, _p,
+                                 POINT_CONVERSION_COMPRESSED, _open_c->_bn_ctx);
+  string ret(res);
+  OPENSSL_free(res);
+  return ret;
+}
+std::unique_ptr<bigint> open_point::to_bn() {
+  unique_ptr<bigint> ret = make_unique<open_bn>();
+  BIGNUM* res =
+      EC_POINT_point2bn(_open_c->_ec_group, _p, POINT_CONVERSION_COMPRESSED,
+                        ptr(ret->_n), _open_c->_bn_ctx);
+  if (res) return ret;
+  return nullptr;
+}
 int open_point::from_bin(const char* bin, int len) {
   int ret = EC_POINT_oct2point(_open_c->_ec_group, _p, (unsigned char*)bin, len,
                                _open_c->_bn_ctx);
   if (ret == 0) return -1;
   return 0;
 };
+int open_point::from_hex(const char* hex) {
+  printf("===1 point _p:%p\n", _p);
+  EC_POINT* res =
+      EC_POINT_hex2point(_open_c->_ec_group, hex, _p, _open_c->_bn_ctx);
+  printf("===2 point _p:%p,res:%p\n", _p, res);
+
+  return res ? 0 : -1;
+}
+int open_point::from_bn(const bigint* bn) {
+  EC_POINT* res =
+      EC_POINT_bn2point(_open_c->_ec_group, ptr(bn->_n), _p, _open_c->_bn_ctx);
+  return res ? 0 : -1;
+}
 void open_point::print() {
   string bin = to_bin();
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "bin:{},len:{}",
                      get_bin_stream(bin.data(), bin.size()), bin.size());
+  string hex = to_hex();
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "hex:{},len:{}", hex,
+                     hex.size());
 };
 
 /****************** open_ecc_point end *******************/
@@ -140,11 +171,9 @@ unordered_map<string, int> curve_map{
     {"prime256v1", NID_X9_62_prime256v1},
     {"secp384r1", NID_secp384r1},
 };
-open_curve::open_curve(int curve_id) {
-  if (curve_id >= _curve_num || curve_id < 0) {
-    curve_id = 0;
-  }
-  _curve_name = _ecc_curve_list[curve_id];
+open_curve::open_curve(string curve_name) : curve(curve_name) {
+  auto is_find = curve_map.find(_curve_name);
+  if (is_find == curve_map.end()) _curve_name = "secp256k1";
   int id = curve_map[_curve_name];
   _ec_group = EC_GROUP_new_by_curve_name(id);  // NIST P-256
   _bn_ctx = BN_CTX_new();
@@ -267,8 +296,8 @@ class openssl_factory : public EccLibFactory {
  public:
   openssl_factory(){};
   ~openssl_factory() { cout << "[info]~openssl_factory" << endl; };
-  std::unique_ptr<curve> new_curve(int curve_id) {
-    return make_unique<open_curve>(curve_id);
+  std::unique_ptr<curve> new_curve(std::string curve_name) {
+    return make_unique<open_curve>(curve_name);
   };
 };
 openssl_factory openssl_lib_factory;
