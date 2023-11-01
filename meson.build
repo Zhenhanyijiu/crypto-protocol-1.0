@@ -17,7 +17,8 @@ project('crypto-protocal', 'cpp',
 
 includes = include_directories(
   '.',
-  '/usr/include/',
+#   '/usr/include/',
+  './thirdparty/cryptoTools',
 #   'include/bloom_filter',
 #   'include/core/io',
 #   'include/core/utils',
@@ -28,7 +29,7 @@ includes = include_directories(
 #   'include/third_party/inc_botan',
 #   'include/third_party/inc_ntl',
 )
-
+# -msse3 -msse2 -msse4.1 -maes -mpclmul
 crypto_compile_args = [
   '-Wno-pedantic',
   '-Wno-sign-compare',
@@ -38,6 +39,11 @@ crypto_compile_args = [
   '-Wno-switch',
   '-Wno-attributes', # llvm enum_extensibility, macoro/coro_frame.h
 #   '-DCOPROTO_ENABLE_BOOST',
+'-msse3',
+'-msse2',
+'-msse4.1',
+'-maes',
+'-mpclmul',
 ]
 
 # absl_dep = dependency('absl', modules: ['absl::base', 'absl::variant', 'absl::strings'])
