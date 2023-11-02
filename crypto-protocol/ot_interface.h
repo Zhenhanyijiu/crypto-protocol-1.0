@@ -20,18 +20,17 @@ class otsender {
   otsender(){};
   //   otsender(const config_param& param){};
   virtual ~otsender(){};
-  virtual void send(std::vector<std::array<oc::block, 2>>& pair_keys,
-                    const conn* sock) = 0;
+  virtual int send(std::vector<std::array<oc::block, 2>>& pair_keys,
+                   conn* sock) = 0;
 };
 class otreceiver {
  private:
   /* data */
  public:
-  //   otreceiver(/* args */);
+  otreceiver(){};
   virtual ~otreceiver(){};
-  virtual void receive(const oc::BitVector& choices,
-                       std::vector<oc::block>& single_keys,
-                       const conn* sock) = 0;
+  virtual int receive(const oc::BitVector& choices,
+                      std::vector<oc::block>& single_keys, conn* sock) = 0;
 };
 
 ;

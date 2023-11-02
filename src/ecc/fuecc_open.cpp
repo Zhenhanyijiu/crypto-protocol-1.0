@@ -193,8 +193,9 @@ open_curve::~open_curve() {
 };
 std::unique_ptr<bigint> open_curve::gen_rand_bn() {
   auto bn = make_unique<open_bn>();
-  BN_rand_range(ptr(bn->_n), _order);
-  return bn;
+  int fg = BN_rand_range(ptr(bn->_n), _order);
+  if (fg) return bn;
+  return nullptr;
 };
 std::unique_ptr<bigint> open_curve::new_bn() { return make_unique<open_bn>(); };
 std::unique_ptr<point> open_curve::new_point() {
@@ -232,6 +233,13 @@ bool open_curve::scalar_mul(const bigint* bn, point* p1) {
       EC_POINT_mul(_ec_group, p_a->_p, NULL, p_a->_p, ptr(bn->_n), _bn_ctx);
   return res;
 };
+bool open_curve::scalar_mul(const bigint* bn, const point* p1, point* p2) {
+  auto p_a = (open_point*)p1;
+  auto p_b = (open_point*)p2;
+  int res =
+      EC_POINT_mul(_ec_group, p_b->_p, NULL, p_a->_p, ptr(bn->_n), _bn_ctx);
+  return res;
+}
 std::unique_ptr<point> open_curve::scalar_base_mul(const bigint* bn) {
   auto ret = make_unique<open_point>(this);
   int res = EC_POINT_mul(_ec_group, ret->_p, ptr(bn->_n), NULL, NULL, _bn_ctx);

@@ -68,6 +68,7 @@ class curve {
   virtual std::unique_ptr<point> scalar_mul_const(const bigint* bn,
                                                   const point* p1) = 0;
   virtual bool scalar_mul(const bigint* bn, point* p1) = 0;
+  virtual bool scalar_mul(const bigint* bn, const point* p1, point* p2) = 0;
   virtual std::unique_ptr<point> scalar_base_mul(const bigint* bn) = 0;
   virtual std::unique_ptr<point> get_generator() = 0;
   virtual std::unique_ptr<point> inv_const(const point* p) = 0;

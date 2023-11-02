@@ -68,6 +68,7 @@ class open_curve : public curve {
   bool add(const point* p1, point* p2);
   std::unique_ptr<point> scalar_mul_const(const bigint* bn, const point* p1);
   bool scalar_mul(const bigint* bn, point* p1);
+  bool scalar_mul(const bigint* bn, const point* p1, point* p2);
   std::unique_ptr<point> scalar_base_mul(const bigint* bn);
   std::unique_ptr<point> get_generator();
   std::unique_ptr<point> inv_const(const point* p);
