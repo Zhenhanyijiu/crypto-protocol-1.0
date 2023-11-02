@@ -51,17 +51,19 @@ int np99sender::send(std::vector<std::array<oc::block, 2>>& pair_keys,
                      conn* sock) {
   int ot_num = pair_keys.size();
   if (ot_num <= 0) return 0;
-  auto bn_c = _ecc->gen_rand_bn();
-  if (!bn_c) return -1;
-  //   随机点 C
-  auto C = _ecc->scalar_base_mul(bn_c.get());
-  if (!C) return -2;
-  //   alpha
+  //   生成随机点 C
   auto alpha = _ecc->gen_rand_bn();
-  if (!alpha) return -3;
+  if (!alpha) return -1;
+  auto C = _ecc->new_point();
+  bool fg = _ecc->scalar_base_mul(alpha.get(), C.get());
+  if (!fg) return -2;
+  //   alpha
+  fg = _ecc->gen_rand_bn(alpha.get());
+  if (!fg) return -3;
   //   A=alpha*G
-  auto A = _ecc->scalar_base_mul(alpha.get());
-  if (!A) return -4;
+  auto A = _ecc->new_point();
+  fg = _ecc->scalar_base_mul(alpha.get(), A.get());
+  if (!fg) return -4;
   //   cereal 序列化
   //   np99_msg_AC ac;
   array<string, 2> ac;
@@ -83,21 +85,24 @@ int np99sender::send(std::vector<std::array<oc::block, 2>>& pair_keys,
   bin_in_ar(recv_pks_str);
   if (ot_num != recv_pks_str.size()) return -6;
   //   vector<unique_ptr<point>> recv_pks_str(ot_num);
-  auto pk_i0 = _ecc->new_point();
-  //   auto tmp_pk = _ecc->new_point();
+  //   使用A变量作为pk_i0,不用再创建新的变量了
+  auto& pk_i0 = A;
+  auto tmp_pk = _ecc->new_point();
   char out_buf[32];
   for (size_t i = 0; i < ot_num; i++) {
     string tmp = recv_pks_str[i];
+    // 使用
     pk_i0->from_bin(tmp.data(), tmp.size());
     // alpha*pk_i0
-    auto tmp_pk = _ecc->scalar_mul_const(alpha.get(), pk_i0.get());
+    bool fg = _ecc->scalar_mul(alpha.get(), pk_i0.get(), tmp_pk.get());
+    if (!fg) return -10;
     string bin = tmp_pk->to_bin();
     _hash->hasher_reset();
     _hash->hasher_update(bin.data(), bin.size());
     _hash->hasher_final(out_buf, 32);
     pair_keys[i][0] = *(oc::block*)out_buf;
     //
-    bool fg = _ecc->inv(pk_i0.get());
+    fg = _ecc->inv(pk_i0.get());
     if (!fg) return -7;
     fg = _ecc->add(C.get(), pk_i0.get());  // C-pk_i0
     if (!fg) return -8;
@@ -136,28 +141,44 @@ int np99receiver::receive(const oc::BitVector& choices,
   cereal::BinaryInputArchive bin_in_ar(ss);
   bin_in_ar(ac);
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "np99 receiver recv AC ok");
-  auto c_point = _ecc->new_point();
-  int fg = c_point->from_bin(ac[1].data(), ac[1].size());
+  auto C = _ecc->new_point();
+  int fg = C->from_bin(ac[1].data(), ac[1].size());
   if (fg) return -2;
+  // A point
+  auto A = _ecc->new_point();
+  fg = A->from_bin(ac[0].data(), ac[0].size());
+  if (fg) return -13;
   //
   vector<string> pk_i0(ot_num);
-  vector<unique_ptr<bigint>> sk_i(ot_num);
+  vector<string> k_i_A(ot_num);
+  //   vector<unique_ptr<bigint>> sk_i(ot_num);
+  auto sk_i = _ecc->new_bn();
+  auto k_G = _ecc->new_point();
   for (size_t i = 0; i < ot_num; i++) {
     // ?? move()
-    sk_i[i] = _ecc->gen_rand_bn();
-    int ch = choices[i];
-    auto k_G = _ecc->scalar_base_mul(sk_i[i].get());
+    bool fg = _ecc->gen_rand_bn(sk_i.get());
+    if (!fg) return -10;
+    // int ch = choices[i];
+    fg = _ecc->scalar_base_mul(sk_i.get(), k_G.get());
+    if (!fg) return -11;
     if (choices[i]) {
       // C-kG
-      bool fg = _ecc->inv(k_G.get());
+      fg = _ecc->inv(k_G.get());
       if (!fg) return -3;
-      _ecc->add(c_point.get(), k_G.get());
+      fg = _ecc->add(C.get(), k_G.get());
+      if (!fg) return -12;
     } else {
       // kG
     }
     string tmp = k_G->to_bin();
     if (tmp.empty()) return -4;
     pk_i0[i] = tmp;
+    // ki*A
+    auto& k_A = k_G;
+    _ecc->scalar_mul(sk_i.get(), A.get(), k_A.get());
+    string tmp2 = k_A->to_bin();
+    if (tmp2.empty()) return -14;
+    k_i_A[i] = tmp2;
   }
   ss.clear(), ss.str("");
   cereal::BinaryOutputArchive bin_out_ar(ss);
@@ -165,17 +186,15 @@ int np99receiver::receive(const oc::BitVector& choices,
   //   send pk_i0
   sock->send(ss.str());
   // 生成解密密钥
-  // A point
-  auto a_point = _ecc->new_point();
-  a_point->from_bin(ac[0].data(), ac[0].size());
+
   char out_buf[32];
   for (size_t i = 0; i < ot_num; i++) {
-    bool fg = _ecc->scalar_mul(sk_i[i].get(), a_point.get(), c_point.get());
-    if (!fg) return -5;
-    string bin = c_point->to_bin();
-    if (bin.empty()) return -6;
+    // bool fg = _ecc->scalar_mul(sk_i[i].get(), a_point.get(), c_point.get());
+    // if (!fg) return -5;
+    // string bin = c_point->to_bin();
+    // if (bin.empty()) return -6;
     _hash->hasher_reset();
-    _hash->hasher_update(bin.data(), bin.size());
+    _hash->hasher_update(k_i_A[i].data(), k_i_A[i].size());
     _hash->hasher_final(out_buf, 32);
     single_keys[i] = *(oc::block*)out_buf;
   }

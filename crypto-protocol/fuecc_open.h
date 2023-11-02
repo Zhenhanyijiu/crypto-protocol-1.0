@@ -61,17 +61,19 @@ class open_curve : public curve {
   open_curve(string curve_name);
   ~open_curve();
   std::unique_ptr<bigint> gen_rand_bn();
+  bool gen_rand_bn(bigint* bn);
   std::unique_ptr<bigint> new_bn();
   std::unique_ptr<point> new_point();
   bool is_on_curve(const point* p);
-  std::unique_ptr<point> add_const(const point* p1, const point* p2);
+  bool add(const point* p1, const point* p2, point* ret);
   bool add(const point* p1, point* p2);
-  std::unique_ptr<point> scalar_mul_const(const bigint* bn, const point* p1);
+  //   std::unique_ptr<point> scalar_mul_const(const bigint* bn, const point*
+  //   p1);
   bool scalar_mul(const bigint* bn, point* p1);
   bool scalar_mul(const bigint* bn, const point* p1, point* p2);
-  std::unique_ptr<point> scalar_base_mul(const bigint* bn);
+  bool scalar_base_mul(const bigint* bn, point* ret);
   std::unique_ptr<point> get_generator();
-  std::unique_ptr<point> inv_const(const point* p);
+  bool inv(const point* p, point* ret);
   bool inv(point* p);
   std::unique_ptr<point> copy(const point* p);
   bool copy(const point* p, point* dst);

@@ -197,6 +197,9 @@ std::unique_ptr<bigint> open_curve::gen_rand_bn() {
   if (fg) return bn;
   return nullptr;
 };
+bool open_curve::gen_rand_bn(bigint* bn) {
+  return BN_rand_range(ptr(bn->_n), _order);
+}
 std::unique_ptr<bigint> open_curve::new_bn() { return make_unique<open_bn>(); };
 std::unique_ptr<point> open_curve::new_point() {
   return make_unique<open_point>(this);
@@ -205,28 +208,28 @@ bool open_curve::is_on_curve(const point* p) {
   auto pt = (open_point*)p;
   return EC_POINT_is_on_curve(_ec_group, pt->_p, _bn_ctx);
 };
-std::unique_ptr<point> open_curve::add_const(const point* p1, const point* p2) {
+bool open_curve::add(const point* p1, const point* p2, point* ret) {
   auto p_a = (open_point*)p1;
   auto p_b = (open_point*)p2;
-  auto ret = make_unique<open_point>(this);
-  int res = EC_POINT_add(_ec_group, ret->_p, p_a->_p, p_b->_p, _bn_ctx);
-  if (res) return ret;
-  return nullptr;
+  auto p_ret = (open_point*)ret;
+  //   auto ret = make_unique<open_point>(this);
+  int res = EC_POINT_add(_ec_group, p_ret->_p, p_a->_p, p_b->_p, _bn_ctx);
+  return res;
 };
 bool open_curve::add(const point* p1, point* p2) {
   auto p_a = (open_point*)p1;
   auto p_b = (open_point*)p2;
   return EC_POINT_add(_ec_group, p_b->_p, p_a->_p, p_b->_p, _bn_ctx);
 };
-std::unique_ptr<point> open_curve::scalar_mul_const(const bigint* bn,
-                                                    const point* p1) {
-  auto p_a = (open_point*)p1;
-  auto ret = make_unique<open_point>(this);
-  int res =
-      EC_POINT_mul(_ec_group, ret->_p, NULL, p_a->_p, ptr(bn->_n), _bn_ctx);
-  if (res) return ret;
-  return nullptr;
-};
+// std::unique_ptr<point> open_curve::scalar_mul_const(const bigint* bn,
+//                                                     const point* p1) {
+//   auto p_a = (open_point*)p1;
+//   auto ret = make_unique<open_point>(this);
+//   int res =
+//       EC_POINT_mul(_ec_group, ret->_p, NULL, p_a->_p, ptr(bn->_n), _bn_ctx);
+//   if (res) return ret;
+//   return nullptr;
+// };
 bool open_curve::scalar_mul(const bigint* bn, point* p1) {
   auto p_a = (open_point*)p1;
   int res =
@@ -240,11 +243,12 @@ bool open_curve::scalar_mul(const bigint* bn, const point* p1, point* p2) {
       EC_POINT_mul(_ec_group, p_b->_p, NULL, p_a->_p, ptr(bn->_n), _bn_ctx);
   return res;
 }
-std::unique_ptr<point> open_curve::scalar_base_mul(const bigint* bn) {
-  auto ret = make_unique<open_point>(this);
-  int res = EC_POINT_mul(_ec_group, ret->_p, ptr(bn->_n), NULL, NULL, _bn_ctx);
-  if (res) return ret;
-  return nullptr;
+bool open_curve::scalar_base_mul(const bigint* bn, point* ret) {
+  //   auto ret = make_unique<open_point>(this);
+  auto p_ret = (open_point*)ret;
+  int res =
+      EC_POINT_mul(_ec_group, p_ret->_p, ptr(bn->_n), NULL, NULL, _bn_ctx);
+  return res;
 };
 std::unique_ptr<point> open_curve::get_generator() {
   auto ret = make_unique<open_point>(this);
@@ -252,14 +256,14 @@ std::unique_ptr<point> open_curve::get_generator() {
   if (res) return ret;
   return nullptr;
 };
-std::unique_ptr<point> open_curve::inv_const(const point* p) {
+bool open_curve::inv(const point* p, point* ret) {
   auto p_a = (open_point*)p;
-  auto ret = make_unique<open_point>(this);
-  int fg = EC_POINT_copy(ret->_p, p_a->_p);
-  if (!fg) return nullptr;
-  fg = EC_POINT_invert(_ec_group, ret->_p, _bn_ctx);
-  if (fg) return ret;
-  return nullptr;
+  auto p_ret = (open_point*)ret;
+  //   auto ret = make_unique<open_point>(this);
+  int fg = EC_POINT_copy(p_ret->_p, p_a->_p);
+  if (!fg) return false;
+  fg = EC_POINT_invert(_ec_group, p_ret->_p, _bn_ctx);
+  return fg;
 };
 bool open_curve::inv(point* p) {
   auto p_a = (open_point*)p;

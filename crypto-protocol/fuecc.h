@@ -57,21 +57,21 @@ class curve {
   curve(std::string curve_name) { _curve_name = curve_name; };
   virtual ~curve(){};
   virtual std::unique_ptr<bigint> gen_rand_bn() = 0;
+  virtual bool gen_rand_bn(bigint* bn) = 0;
   virtual std::unique_ptr<bigint> new_bn() = 0;
   virtual std::unique_ptr<point> new_point() = 0;
   //   virtual std::unique_ptr<bigint> set_hex2bn(std::string hex) = 0;
   //   virtual std::unique_ptr<bigint> set_hex2bn(std::string hex) = 0;
   virtual bool is_on_curve(const point* p) = 0;
-  virtual std::unique_ptr<point> add_const(const point* p1,
-                                           const point* p2) = 0;
+  virtual bool add(const point* p1, const point* p2, point* ret) = 0;
   virtual bool add(const point* p1, point* p2) = 0;
-  virtual std::unique_ptr<point> scalar_mul_const(const bigint* bn,
-                                                  const point* p1) = 0;
+  //   virtual std::unique_ptr<point> scalar_mul_const(const bigint* bn,
+  //                                                   const point* p1) = 0;
   virtual bool scalar_mul(const bigint* bn, point* p1) = 0;
   virtual bool scalar_mul(const bigint* bn, const point* p1, point* p2) = 0;
-  virtual std::unique_ptr<point> scalar_base_mul(const bigint* bn) = 0;
+  virtual bool scalar_base_mul(const bigint* bn, point* ret) = 0;
   virtual std::unique_ptr<point> get_generator() = 0;
-  virtual std::unique_ptr<point> inv_const(const point* p) = 0;
+  virtual bool inv(const point* p, point* ret) = 0;
   virtual bool inv(point* p) = 0;
   virtual std::unique_ptr<point> copy(const point* p) = 0;
   virtual bool copy(const point* p, point* dst) = 0;

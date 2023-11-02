@@ -94,9 +94,11 @@ void test_curve_add_const(string curve_name) {
   auto k1 = c->new_bn();
   k1->from_dec("2");
   auto G = c->get_generator();
-  auto P1 = c->scalar_base_mul(k1.get());  // p1=2G
+  auto P1 = c->new_point();
+  c->scalar_base_mul(k1.get(), P1.get());  // p1=2G
   P1->print();
-  unique_ptr<point> P2 = c->add_const(G.get(), G.get());
+  unique_ptr<point> P2 = c->new_point();
+  c->add(G.get(), G.get(), P2.get());
   P2->print();
 }
 
@@ -108,13 +110,15 @@ void test_curve_add(string curve_name) {
   auto k1 = c->new_bn();
   k1->from_dec("2");
   auto G = c->get_generator();
-  auto P1 = c->scalar_base_mul(k1.get());  // p1=2G
+  auto P1 = c->new_point();
+  c->scalar_base_mul(k1.get(), P1.get());  // p1=2G
   P1->print();
   bool fg = c->add(G.get(), P1.get());
   if (fg) SPDLOG_LOGGER_INFO(spdlog::default_logger(), "fg:{}", fg);
   P1->print();
   k1->from_dec("3");
-  auto P2 = c->scalar_base_mul(k1.get());  // p1=3G
+  auto P2 = c->new_point();
+  c->scalar_base_mul(k1.get(), P2.get());  // p1=3G
   P2->print();
   bool fg2 = c->equal(P2.get(), P1.get());
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "equal:{}", fg2);
@@ -128,12 +132,15 @@ void test_curve_scalar_mul_const(string curve_name) {
   auto k1 = c->new_bn();
   k1->from_dec("2");
   auto G = c->get_generator();
-  auto P1 = c->scalar_base_mul(k1.get());  // p1=2G
+  auto P1 = c->new_point();
+  c->scalar_base_mul(k1.get(), P1.get());  // p1=2G
   k1->from_dec("3");
-  auto P2 = c->scalar_mul_const(k1.get(), P1.get());  // p2=3*p1
+  auto P2 = c->new_point();
+  c->scalar_mul(k1.get(), P1.get(), P2.get());  // p2=3*p1
   P2->print();
   k1->from_dec("6");
-  unique_ptr<point> P3 = c->scalar_base_mul(k1.get());  // p3=6*G
+  unique_ptr<point> P3 = c->new_point();
+  c->scalar_base_mul(k1.get(), P3.get());  // p3=6*G
   P3->print();
   bool fg = c->equal(P2.get(), P3.get());
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "equal:{}", fg);
@@ -148,14 +155,16 @@ void test_curve_scalar_mul(string curve_name) {
   auto k1 = c->new_bn();
   k1->from_dec("2");
   auto G = c->get_generator();
-  auto P1 = c->scalar_base_mul(k1.get());  // p1=2G
+  auto P1 = c->new_point();
+  c->scalar_base_mul(k1.get(), P1.get());  // p1=2G
   P1->print();
   k1->from_dec("4");
   bool fg = c->scalar_mul(k1.get(), P1.get());  // p2=8*G
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "mul:{}", fg);
   P1->print();
   k1->from_dec("8");
-  auto P2 = c->scalar_base_mul(k1.get());  // p2=8G
+  auto P2 = c->new_point();
+  c->scalar_base_mul(k1.get(), P2.get());  // p2=8G
   P2->print();
   bool fg2 = c->equal(P2.get(), P1.get());
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "equal:{}", fg2);
@@ -170,11 +179,14 @@ void test_curve_inv_const(string curve_name) {
   auto k1 = c->new_bn();
   k1->from_dec("2");
   auto G = c->get_generator();
-  auto p1 = c->scalar_base_mul(k1.get());  // p1=2G
+  auto p1 = c->new_point();
+  c->scalar_base_mul(k1.get(), p1.get());  // p1=2G
   p1->print();
-  unique_ptr<point> p1_inv = c->inv_const(p1.get());
+  unique_ptr<point> p1_inv = c->new_point();
+  c->inv(p1.get(), p1_inv.get());
   p1_inv->print();
-  auto O_inf = c->add_const(p1.get(), p1_inv.get());
+  auto O_inf = c->new_point();
+  c->add(p1.get(), p1_inv.get(), O_inf.get());
   O_inf->print();
   bool fg = false;
   fg = c->is_at_infinity(O_inf.get());
@@ -189,13 +201,15 @@ void test_curve_inv(string curve_name) {
   auto k1 = c->new_bn();
   k1->from_dec("5");
   auto G = c->get_generator();
-  auto p1 = c->scalar_base_mul(k1.get());  // p1=5G
+  auto p1 = c->new_point();
+  c->scalar_base_mul(k1.get(), p1.get());  // p1=5G
   p1->print();
   c->copy(p1.get(), G.get());
   G->print();
   c->inv(p1.get());
   p1->print();
-  auto O_inf = c->add_const(p1.get(), G.get());
+  auto O_inf = c->new_point();
+  c->add(p1.get(), G.get(), O_inf.get());
   O_inf->print();
   bool fg = false;
   fg = c->is_at_infinity(O_inf.get());
@@ -211,7 +225,8 @@ void test_curve_set_to_infinity(string curve_name) {
   auto k1 = c->new_bn();
   k1->from_dec("5");
   auto G = c->get_generator();
-  auto p1 = c->scalar_base_mul(k1.get());  // p1=5G
+  auto p1 = c->new_point();
+  c->scalar_base_mul(k1.get(), p1.get());  // p1=5G
   p1->print();
   c->set_to_infinity(p1.get());
   p1->print();
@@ -227,18 +242,23 @@ void test_curve_openssl_factory(string curve_name) {
   auto bn2 = cv->new_bn();
   bn2->from_dec("2");
   bn2->print();
-  auto p1 = cv->scalar_base_mul(bn2.get());
+  auto p1 = cv->new_point();
+  cv->scalar_base_mul(bn2.get(), p1.get());
   p1->print();
   bn2->from_dec("20");
-  auto p2 = cv->scalar_mul_const(bn2.get(), p1.get());
+  auto p2 = cv->new_point();
+  cv->scalar_mul(bn2.get(), p1.get(), p2.get());
   p2->print();
   bn2->from_dec("40");
-  auto p3 = cv->scalar_base_mul(bn2.get());
+  auto p3 = cv->new_point();
+  cv->scalar_base_mul(bn2.get(), p3.get());
   bool fg = cv->equal(p2.get(), p3.get());
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "equal:{}", fg);
-  auto p3_inv = cv->inv_const(p3.get());
+  auto p3_inv = cv->new_point();
+  cv->inv(p3.get(), p3_inv.get());
   bn2->from_dec("-1");
-  auto p3_inv2 = cv->scalar_mul_const(bn2.get(), p3.get());
+  auto p3_inv2 = cv->new_point();
+  cv->scalar_mul(bn2.get(), p3.get(), p3_inv2.get());
 
   bool fg2 = cv->equal(p3_inv.get(), p3_inv2.get());
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "inv equal:{}", fg2);
@@ -258,7 +278,8 @@ void test_curve_open_point_2hex(string curve_name) {
   bn2->from_bin((char*)buf, 2);
   bn2->print();
   bn1->from_dec("2");
-  auto p1 = cv->scalar_base_mul(bn1.get());
+  auto p1 = cv->new_point();
+  cv->scalar_base_mul(bn1.get(), p1.get());
   p1->print();
   auto p2 = cv->new_point();
   p2->from_hex(p1->to_hex().c_str());
@@ -274,7 +295,8 @@ void test_curve_open_point_2bn(string curve_name) {
   auto bn1 = cv->new_bn();
   bn1->from_dec("11111");
   bn1->print();
-  auto p1 = cv->scalar_base_mul(bn1.get());
+  auto p1 = cv->new_point();
+  cv->scalar_base_mul(bn1.get(), p1.get());
   cout << ">>> print point:" << endl;
   p1->print();
   cout << ">>> to_bn1:" << endl;
