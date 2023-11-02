@@ -50,7 +50,7 @@ executable('test_ecc_open', 'test_fuecc_open.cpp',
   include_directories: includes,
   cpp_args: crypto_compile_args,
   dependencies: crypto_dependencies)
-executable('test_base_ot', 'test_base_ot.cpp',
+executable('test_ot_base', 'test_ot_base.cpp',
   include_directories: includes,
   cpp_args: crypto_compile_args,
   dependencies: crypto_dependencies)
