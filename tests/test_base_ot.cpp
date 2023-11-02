@@ -25,7 +25,7 @@ void test_np99sender(int ot_num, vector<array<oc::block, 2>>& pair_keys) {
   if (fg) {
     SPDLOG_LOGGER_ERROR(spdlog::default_logger(), "ot send error fg:{}", fg);
   } else {
-    SPDLOG_LOGGER_INFO(spdlog::default_logger(), "ot send ok fg:{}", fg);
+    SPDLOG_LOGGER_INFO(spdlog::default_logger(), "ot send fg:{} , ok", fg);
   }
   // np99sender np_sender2;
   //   }
@@ -51,14 +51,34 @@ void test_np99receiver(int ot_num, vector<oc::block>& single_keys,
   if (fg) {
     SPDLOG_LOGGER_ERROR(spdlog::default_logger(), "ot receive error fg:{}", fg);
   } else {
-    SPDLOG_LOGGER_INFO(spdlog::default_logger(), "ot receive ok fg:{}", fg);
+    SPDLOG_LOGGER_INFO(spdlog::default_logger(), "ot receive fg:{}, ok", fg);
   }
   //   }
   //   check
 }
+static void check(oc::BitVector& choices, vector<oc::block>& single_keys,
+                  vector<array<oc::block, 2>>& pair_keys) {
+  int ot_num = single_keys.size();
+  for (size_t i = 0; i < ot_num; i++) {
+    if (i < 10 && i < ot_num) {
+      cout << "i:" << i << "," << pair_keys[i][0] << "," << pair_keys[i][1]
+           << endl;
+      cout << "i:" << i << "," << single_keys[i] << ",c:" << choices[i] << endl;
+    }
+    bool fg = eq(single_keys[i], pair_keys[i][choices[i]]);
+    if (!fg) {
+      cout << "=== error i:" << i << endl;
+      return;
+    }
+    // oc::block
+  }
+  cout << "========= check ok" << endl;
+  cout << "========= ot_num:" << ot_num << endl;
+}
 int main(int argc, char** argv) {
   spdlog_set_level("info");
-  int ot_num = 128;
+  int ot_num = 1;
+  if (argc > 1) ot_num = atoi(argv[1]);
   vector<oc::block> single_keys(ot_num);
   vector<array<oc::block, 2>> pair_keys(ot_num);
   auto seed = oc::sysRandomSeed();
@@ -71,11 +91,7 @@ int main(int argc, char** argv) {
   th1.join();
   th2.join();
   //   check
-  for (size_t i = 0; i < ot_num; i++) {
-    cout << "i:" << i << "," << pair_keys[i][0] << "," << pair_keys[i][1]
-         << endl;
-    cout << "i:" << i << "," << single_keys[i] << ",c:" << choices[i] << endl;
-  }
+  check(choices, single_keys, pair_keys);
 
   return 0;
 }
