@@ -143,11 +143,11 @@ int np99receiver::receive(const oc::BitVector& choices,
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "np99 receiver recv AC ok");
   auto C = _ecc->new_point();
   int fg = C->from_bin(ac[1].data(), ac[1].size());
-  if (fg) return -2;
+  if (!fg) return -2;
   // A point
   auto A = _ecc->new_point();
   fg = A->from_bin(ac[0].data(), ac[0].size());
-  if (fg) return -13;
+  if (!fg) return -13;
   //
   vector<string> pk_i0(ot_num);
   vector<string> k_i_A(ot_num);

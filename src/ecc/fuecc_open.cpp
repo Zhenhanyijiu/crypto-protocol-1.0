@@ -28,7 +28,7 @@ static string get_bin_stream(const char* bg, int len) {
 }
 open_bn::open_bn() {
   _n = BN_new();
-  BN_zero(ptr(_n));
+  //   BN_zero(ptr(_n));
   //   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "addr init:{:p}", _n);
 };
 open_bn::open_bn(open_bn&& n) {
@@ -59,12 +59,14 @@ std::string open_bn::to_bin() {
 }
 std::string open_bn::to_hex() {
   char* s = BN_bn2hex(ptr(_n));
+  if (!s) return "";
   string ret(s);
   OPENSSL_free(s);
   return ret;
 }
 std::string open_bn::to_dec() {
   char* s = BN_bn2dec(ptr(_n));
+  if (!s) return "";
   string ret(s);
   OPENSSL_free(s);
   return ret;
@@ -72,8 +74,10 @@ std::string open_bn::to_dec() {
 int open_bn::from_bin(const char* bin, int len) {
   printf("===1 n_ptr:%p\n", _n);
   auto res = BN_bin2bn((unsigned char*)bin, len, ptr(_n));
+  if (!res) return 0;
+  if (!_n) _n = res;
   printf("===2 res:%p,_n:%p\n", res, ptr(_n));
-  return res ? 0 : -1;
+  return 1;
 }
 int open_bn::from_hex(std::string hex) {
   return BN_hex2bn((BIGNUM**)&_n, hex.c_str());
@@ -82,6 +86,7 @@ int open_bn::from_dec(std::string dec) {
   return BN_dec2bn((BIGNUM**)&_n, dec.c_str());
 }
 int open_bn::cmp(const bigint* a, const bigint* b) {
+  // returns -1 if a < b, 0 if a == b and 1 if a > b
   return BN_cmp(ptr(a->_n), ptr(b->_n));
 }
 void open_bn::print() {
@@ -124,6 +129,7 @@ std::string open_point::to_bin() {
 std::string open_point::to_hex() {
   char* res = EC_POINT_point2hex(_open_c->_ec_group, _p,
                                  POINT_CONVERSION_COMPRESSED, _open_c->_bn_ctx);
+  if (!res) return "";
   string ret(res);
   OPENSSL_free(res);
   return ret;
@@ -139,20 +145,22 @@ std::unique_ptr<bigint> open_point::to_bn() {
 int open_point::from_bin(const char* bin, int len) {
   int ret = EC_POINT_oct2point(_open_c->_ec_group, _p, (unsigned char*)bin, len,
                                _open_c->_bn_ctx);
-  if (ret == 0) return -1;
-  return 0;
+  return ret;
 };
 int open_point::from_hex(const char* hex) {
   printf("===1 point _p:%p\n", _p);
   EC_POINT* res =
       EC_POINT_hex2point(_open_c->_ec_group, hex, _p, _open_c->_bn_ctx);
   printf("===2 point _p:%p,res:%p\n", _p, res);
-
-  return res ? 0 : -1;
+  if (!res) return 0;
+  if (!_p) _p = res;
+  return 1;
 }
 int open_point::from_bn(const bigint* bn) {
   EC_POINT* res =
       EC_POINT_bn2point(_open_c->_ec_group, ptr(bn->_n), _p, _open_c->_bn_ctx);
+  if (!res) return 0;
+  if (!_p) _p = res;
   return res ? 0 : -1;
 }
 void open_point::print() {
