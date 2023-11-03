@@ -161,7 +161,7 @@ int open_point::from_bn(const bigint* bn) {
       EC_POINT_bn2point(_open_c->_ec_group, ptr(bn->_n), _p, _open_c->_bn_ctx);
   if (!res) return 0;
   if (!_p) _p = res;
-  return res ? 0 : -1;
+  return 1;
 }
 void open_point::print() {
   string bin = to_bin();
