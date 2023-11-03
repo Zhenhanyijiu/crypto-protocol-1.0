@@ -17,7 +17,8 @@ source_files = files(
   'ecc/eccopenssl.cpp',  
   'ecc/fuecc_open.cpp',  
   'ecc/fuecc.cpp',
-  'ot/ot_base.cpp',  
+  'ot/ot_base.cpp',
+  'ot/ot_iknp.cpp',  
 )
 
 crypto_lib = library('crypto_protocol',

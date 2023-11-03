@@ -1,6 +1,11 @@
 #include "crypto-protocol/ot_base.h"
 #include "crypto-protocol/fulog.h"
 #include "crypto-protocol/tcpsocket.h"
+#include <cereal/types/memory.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/string.hpp>
+#include <cereal/types/array.hpp>
+#include <cereal/archives/binary.hpp>
 #include <bits/stdc++.h>
 using namespace std;
 using namespace fucrypto;
@@ -9,7 +14,8 @@ vector<string> curve_list = {
     // "prime256v1",
     // "secp384r1",
 };
-void test_np99sender(int ot_num, vector<array<oc::block, 2>>& pair_keys) {
+static void test_np99sender(int ot_num,
+                            vector<array<oc::block, 2>>& pair_keys) {
   connection c(0, "127.0.0.1", 9001);
   config_param param, param2;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "ecc_lib_name:{},curve_name:{}",
@@ -30,8 +36,8 @@ void test_np99sender(int ot_num, vector<array<oc::block, 2>>& pair_keys) {
   // np99sender np_sender2;
   //   }
 }
-void test_np99receiver(int ot_num, vector<oc::block>& single_keys,
-                       oc::BitVector& choices) {
+static void test_np99receiver(int ot_num, vector<oc::block>& single_keys,
+                              oc::BitVector& choices) {
   connection c(1, "127.0.0.1", 9001);
   config_param param, param2;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "ecc_lib_name:{},curve_name:{}",
@@ -75,6 +81,20 @@ static void check(oc::BitVector& choices, vector<oc::block>& single_keys,
   cout << "========= check ok" << endl;
   cout << "========= ot_num:" << ot_num << endl;
 }
+// void test_cereal_block() {
+//   vector<char> buf = {
+//       //   oc::toBlock(0xff11, 0xee22),
+//       //   oc::toBlock(0xff11, 0xee22),
+//       //   oc::toBlock(0xff11, 0xee22),
+//       'a',
+//       'b',
+//       'c',
+//   };
+//   stringstream ss;
+//   cereal::BinaryOutputArchive out_ar(ss);
+//   out_ar(buf);
+//   cout << "out ar:" << ss.str() << "," << ss.str().size() << endl;
+// }
 int main(int argc, char** argv) {
   spdlog_set_level("info");
   int ot_num = 1;
@@ -92,6 +112,6 @@ int main(int argc, char** argv) {
   th2.join();
   //   check
   check(choices, single_keys, pair_keys);
-
+  //   test_cereal_block();
   return 0;
 }
