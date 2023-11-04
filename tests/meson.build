@@ -64,3 +64,8 @@ executable('test_ot_iknp', 'test_ot_iknp.cpp',
   include_directories: includes,
   cpp_args: crypto_compile_args,
   dependencies: crypto_dependencies)
+
+executable('test_kkrt', 'test_kkrt.cpp',
+  include_directories: includes,
+  cpp_args: crypto_compile_args,
+  dependencies: crypto_dependencies)

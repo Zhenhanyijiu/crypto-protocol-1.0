@@ -1,4 +1,5 @@
 #include "crypto-protocol/ote_iknp.h"
+#include "crypto-protocol/ot_base.h"
 #include "crypto-protocol/fulog.h"
 #include "cryptoTools/Common/tools.h"
 #include <cereal/types/memory.hpp>
@@ -30,6 +31,22 @@ int iknp_sender::set_base_ot(const oc::BitVector &base_choices,
 }
 int iknp_sender::send(std::vector<std::array<oc::block, 2>> &encMsgOutput,
                       conn *sock) {
+  if (_has_base_ot == false) {
+    np99receiver otbase;
+    otreceiver *ot = &otbase;
+    oc::PRNG rng(oc::sysRandomSeed());
+    oc::BitVector chs(base_ot_count);
+    chs.randomize(rng);
+    vector<block> single_keys(base_ot_count);
+    int fg = ot->receive(chs, single_keys, sock);
+    if (fg) return fg;
+    //
+    for (size_t i = 0; i < base_ot_count; i++) {
+      mGens[i].SetSeed(single_keys[i]);
+      mBaseChoiceBits = chs;
+    }
+    _has_base_ot = true;
+  }
   // const vector<block> &uBuffInputAll,
   //    vector<array<block, 2>> &encMsgOutput
   // round up
@@ -193,6 +210,22 @@ int iknp_receiver::set_base_ot(
 int iknp_receiver::receive(const oc::BitVector &choicesWidthInput,
                            std::vector<oc::block> &recoverMsgWidthOutput,
                            conn *sock) {
+  if (_has_base_ot == false) {
+    np99sender otbase;
+    otsender *ot = &otbase;
+    // oc::PRNG rng(oc::sysRandomSeed());
+    // oc::BitVector chs(base_ot_count);
+    // chs.randomize(rng);
+    vector<array<block, 2>> pair_keys(base_ot_count);
+    int fg = ot->send(pair_keys, sock);
+    if (fg) return fg;
+    //
+    for (size_t i = 0; i < base_ot_count; i++) {
+      mGens[i][0].SetSeed(pair_keys[i][0]);
+      mGens[i][1].SetSeed(pair_keys[i][1]);
+    }
+    _has_base_ot = true;
+  }
   //   const BitVector &choicesWidthInput,
   //   vector<block> &recoverMsgWidthOutput,
   //   vector<block> &uBuffOutputAll

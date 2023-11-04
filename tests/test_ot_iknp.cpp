@@ -16,7 +16,7 @@ static void test_iknp_sender(vector<array<oc::block, 2>>& pair_keys) {
   ot->receive(chs, single_k, &c);
   iknp_sender iknpsender;
   ote_sender* ote = &iknpsender;
-  ote->set_base_ot(chs, single_k);
+  //   ote->set_base_ot(chs, single_k);
   ote->send(pair_keys, &c);
 }
 static void test_iknp_recver(oc::BitVector& choices,
@@ -31,7 +31,7 @@ static void test_iknp_recver(oc::BitVector& choices,
   ot->send(pair_k, &c);
   iknp_receiver iknprecver;
   ote_receiver* ote = &iknprecver;
-  ote->set_base_ot(pair_k);
+  //   ote->set_base_ot(pair_k);
   ote->receive(choices, single_keys, &c);
 }
 

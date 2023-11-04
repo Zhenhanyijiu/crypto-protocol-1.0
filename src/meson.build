@@ -19,6 +19,7 @@ source_files = files(
   'ecc/fuecc.cpp',
   'ot/ot_base.cpp',
   'ot/ot_iknp.cpp',  
+  'ot/kkrt.cpp',
 )
 
 crypto_lib = library('crypto_protocol',
