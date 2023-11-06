@@ -420,6 +420,7 @@ int kkrt_receiver::encode(u64 otIdx, const void* input, void* dest,
     mAesFixedKey.ecbEncBlocks(t0Val, mT0.stride(), aesBuff.data());
     oc::block val = ZeroBlock;
     for (u64 i = 0; i < mT0.stride(); ++i) val = val ^ aesBuff[i] ^ t0Val[i];
+    memcpy(dest, &val, 16);
   }
 // #ifdef KKRT_SHA_HASH
 
@@ -465,6 +466,7 @@ int kkrt_receiver::sendCorrection(conn* sock, oc::u64 sendCount) {
 
 int kkrt_receiver::encode_all(int numOTExt, const std::vector<oc::u32>& inputs,
                               std::vector<block>& out_mask) {
+  out_mask.resize(numOTExt);
   auto begin = out_mask.data();
   for (auto k = 0ull; k < numOTExt; ++k) {
     *(begin + k) = oc::toBlock(inputs[k]);
