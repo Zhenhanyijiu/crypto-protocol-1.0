@@ -16,8 +16,12 @@ static void test_iknp_sender(vector<array<oc::block, 2>>& pair_keys) {
   ot->receive(chs, single_k, &c);
   iknp_sender iknpsender;
   ote_sender* ote = &iknpsender;
-  //   ote->set_base_ot(chs, single_k);
+  ote->set_base_ot(chs, single_k);
   ote->send(pair_keys, &c);
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "ote sender sendBytes:{} B",
+                     (&c)->send_bytes_count());
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "ote sender recvBytes:{} B",
+                     (&c)->recv_bytes_count());
 }
 static void test_iknp_recver(oc::BitVector& choices,
                              vector<oc::block>& single_keys) {
@@ -31,8 +35,12 @@ static void test_iknp_recver(oc::BitVector& choices,
   ot->send(pair_k, &c);
   iknp_receiver iknprecver;
   ote_receiver* ote = &iknprecver;
-  //   ote->set_base_ot(pair_k);
+  ote->set_base_ot(pair_k);
   ote->receive(choices, single_keys, &c);
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "ote recver sendBytes:{} B",
+                     (&c)->send_bytes_count());
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "ote recver recvBytes:{} B",
+                     (&c)->recv_bytes_count());
 }
 
 static void check(oc::BitVector& choices, vector<oc::block>& single_keys,

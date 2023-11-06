@@ -6,12 +6,18 @@
 // #endif
 namespace fucrypto {
 class conn {
- private:
  public:
+  uint64_t _recv_bytes_count = 0;
+  uint64_t _send_bytes_count = 0;
+
+ public:
+  conn(){};
   virtual ~conn(){};
   virtual int send(const std::string data) = 0;
   virtual std::string recv() = 0;
   virtual int close() = 0;
+  uint64_t recv_bytes_count() { return _recv_bytes_count; };
+  uint64_t send_bytes_count() { return _send_bytes_count; };
 };
 // class Conn {
 //  private:

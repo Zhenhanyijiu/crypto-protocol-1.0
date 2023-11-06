@@ -338,7 +338,7 @@ class init_error : public exception {
   const char *what() const throw() { return "init channel error"; }
 };
 
-connection::connection(int role, const std::string ip_addr, int port) {
+connection::connection(int role, const std::string ip_addr, int port) : conn() {
   if (role == CLIENT)
     _conn = init_channel(CLIENT, ip_addr.c_str(), port);
   else
@@ -354,12 +354,14 @@ connection::~connection() {
   cout << "~connection tcp" << endl;
 }
 int connection::send(const std::string data) {
+  _send_bytes_count += data.size();
   return send_data(_conn, data.c_str(), data.size());
 }
 std::string connection::recv() {
   char *buf = nullptr;
   int n = recv_data(_conn, &buf);
   if (n > 0) {
+    _recv_bytes_count += n;
     return string(buf, n);
   }
   return string();

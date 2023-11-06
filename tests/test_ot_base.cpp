@@ -28,6 +28,11 @@ static void test_np99sender(int ot_num,
   otsender* ot = &np_sender;
   // vector<array<oc::block, 2>> pair_keys(ot_num);
   int fg = ot->send(pair_keys, &c);
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "ot sender sendBytes:{} B",
+                     (&c)->send_bytes_count());
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "ot sender recvBytes:{} B",
+                     (&c)->recv_bytes_count());
+
   if (fg) {
     SPDLOG_LOGGER_ERROR(spdlog::default_logger(), "ot send error fg:{}", fg);
   } else {
@@ -54,6 +59,10 @@ static void test_np99receiver(int ot_num, vector<oc::block>& single_keys,
   //   oc::BitVector choices(ot_num);
   //   choices.randomize(rng);
   int fg = ot->receive(choices, single_keys, &c);
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "ot receive sendBytes:{} B",
+                     (&c)->send_bytes_count());
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "ot receive recvBytes:{} B",
+                     (&c)->recv_bytes_count());
   if (fg) {
     SPDLOG_LOGGER_ERROR(spdlog::default_logger(), "ot receive error fg:{}", fg);
   } else {

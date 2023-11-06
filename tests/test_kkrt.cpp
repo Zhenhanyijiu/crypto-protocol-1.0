@@ -21,13 +21,17 @@ void test_kkrt_sender(const vector<vector<u32>>& inputs,
   vector<block> single_keys(base_ot_num);
   int fg = ote->receive(base_choices, single_keys, &c);
   if (fg) {
-    SPDLOG_LOGGER_INFO(spdlog::default_logger(), "ote error");
+    SPDLOG_LOGGER_ERROR(spdlog::default_logger(), "ote error");
   }
   //
   kkrt.set_base_ot(base_choices, single_keys);
   kkrt.init(numOTExt);
   kkrt.recvCorrection(&c, numOTExt);
   kkrt.encode_all(numOTExt, inputs, out_masks);
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "kkrt sender sendBytes:{} B",
+                     (&c)->send_bytes_count());
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "kkrt sender recvBytes:{} B",
+                     (&c)->recv_bytes_count());
 }
 
 void test_kkrt_receiver(const vector<u32>& choices, vector<block>& out_masks) {
@@ -43,14 +47,18 @@ void test_kkrt_receiver(const vector<u32>& choices, vector<block>& out_masks) {
   vector<array<block, 2>> pair_keys(base_ot_num);
   int fg = ote->send(pair_keys, &c);
   if (fg) {
-    SPDLOG_LOGGER_INFO(spdlog::default_logger(), "ote sender error");
+    SPDLOG_LOGGER_ERROR(spdlog::default_logger(), "ote sender error");
   }
   //
   kkrt.set_base_ot(pair_keys);
   kkrt.init(numOTExt);
   kkrt.encode_all(numOTExt, choices, out_masks);
-
   kkrt.sendCorrection(&c, numOTExt);
+
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "kkrt recver sendBytes:{} B",
+                     (&c)->send_bytes_count());
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "kkrt recver recvBytes:{} B",
+                     (&c)->recv_bytes_count());
 }
 int main_test(int argc, char** argv) {
   srand(time(NULL));
@@ -78,9 +86,10 @@ int main_test(int argc, char** argv) {
   for (size_t i = 0; i < num_Ote; i++) {
     if (i < 5 && i < num_Ote) {
       for (size_t j = 0; j < N; j++) {
-        cout << "[" << j << "]" << out_masks[i][j] << endl;
+        // cout << "[" << j << "]" << out_masks[i][j] << endl;
       }
       cout << "[" << choices[i] << "]" << out_dec_masks[i] << endl;
+      cout << "[" << choices[i] << "]" << out_masks[i][choices[i]] << endl;
       cout << endl;
     }
     if (neq(out_dec_masks[i], out_masks[i][choices[i]]))
