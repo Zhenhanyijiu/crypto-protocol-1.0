@@ -3,11 +3,11 @@
 #include "crypto-protocol/ot_interface.h"
 #include <bits/stdc++.h>
 namespace fucrypto {
-const oc::u32 base_ot_count(128);
+const oc::u32 BaseOtCount(128);
 
 class iknp_sender : public ote_sender {
  private:
-  std::array<oc::PRNG, base_ot_count> mGens;
+  std::array<oc::PRNG, BaseOtCount> mGens;
   oc::BitVector mBaseChoiceBits;
   bool _has_base_ot = false;
 
@@ -23,7 +23,7 @@ class iknp_sender : public ote_sender {
 ///////////// iknp_receiver //////////
 class iknp_receiver : public ote_receiver {
  private:
-  std::array<std::array<oc::PRNG, 2>, base_ot_count> mGens;
+  std::array<std::array<oc::PRNG, 2>, BaseOtCount> mGens;
   bool _has_base_ot = false;
 
  public:

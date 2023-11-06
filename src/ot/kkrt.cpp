@@ -1,3 +1,4 @@
+#include "crypto-protocol/ote_iknp.h"
 #include "crypto-protocol/kkrt.h"
 #include "crypto-protocol/fulog.h"
 #include "cryptoTools/Common/Defines.h"
@@ -23,10 +24,9 @@ kkrt_sender::~kkrt_sender() {
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "~kkrt_sender");
 }
 int kkrt_sender::get_base_ot_count() { return mGens.size(); }
-int kkrt_sender::set_base_ot(const oc::BitVector& base_choices,
-                             const std::vector<oc::block>& base_single_keys) {
+int kkrt_sender::set_base_ot(const BitVector& base_choices,
+                             const vector<block>& base_single_keys) {
   if (base_choices.size() != u64(base_single_keys.size())) return -1;
-
   if (base_choices.size() != u64(mGens.size())) return -2;
   mBaseChoiceBits = base_choices;  // 512个 0-1
   //   mGens.resize(choices.size());
@@ -40,17 +40,17 @@ int kkrt_sender::set_base_ot(const oc::BitVector& base_choices,
   for (u64 i = 0; i < mChoiceBlks.size(); ++i) {
     mChoiceBlks[i] = toBlock(mBaseChoiceBits.data() + (i * sizeof(block)));
   }
+  _has_base_ot = true;
+  return 0;
 }
 
 //
-int kkrt_sender::init(int numOTExt) {
-  block common_key = toBlock(0xaa, 0xff);
+int kkrt_sender::_init(int numOTExt) {
+  block common_key = toBlock(0xaabbccdd, 0xffee7788);
   std::array<block, 4> keys;
   PRNG(common_key).get(keys.data(), keys.size());
   mMultiKeyAES.setKeys(keys);
-  //
   static const u8 superBlkSize(8);
-
   // round up
   numOTExt = ((numOTExt + 127) / 128) * 128;
 
@@ -117,7 +117,6 @@ int kkrt_sender::init(int numOTExt) {
         // do the copy!
         for (u64 k = 0; rowIdx < stopIdx && k < 128; ++rowIdx, ++k) {
           *mTIter = *tIter;
-
           tIter += superBlkSize;
           mTIter += mT.stride();
         }
@@ -129,9 +128,23 @@ int kkrt_sender::init(int numOTExt) {
 }
 
 //
-int kkrt_sender::recvCorrection(conn* sock, u64 recvCount) {
+int kkrt_sender::recv_correction(conn* sock, int num_otext) {
+  if (!_has_base_ot) {
+    int base_num = get_base_ot_count();
+    iknp_receiver iknp;
+    ote_receiver* ote = &iknp;
+    BitVector chs(base_num);
+    PRNG rng(sysRandomSeed());
+    chs.randomize(rng);
+    vector<block> single_keys(base_num);
+    int fg = ote->receive(chs, single_keys, sock);
+    if (fg) return fg;
+    fg = set_base_ot(chs, single_keys);
+    if (fg) return fg;
+  }
+  _init(num_otext);
 #ifndef NDEBUG
-  if (recvCount > mCorrectionVals.bounds()[0] - mCorrectionIdx) return -1;
+  if (num_otext > mCorrectionVals.bounds()[0] - mCorrectionIdx) return -1;
 #endif  // !NDEBUG
 
   // receive the next OT correction values. This will be several rows of the
@@ -141,31 +154,26 @@ int kkrt_sender::recvCorrection(conn* sock, u64 recvCount) {
   //   大小固定
   string ot_data = sock->recv();
   assert(ot_data.size() ==
-         recvCount * sizeof(block) * mCorrectionVals.stride());
+         num_otext * sizeof(block) * mCorrectionVals.stride());
   memcpy((u8*)&*dest, ot_data.data(),
-         recvCount * sizeof(block) * mCorrectionVals.stride());
+         num_otext * sizeof(block) * mCorrectionVals.stride());
   //   chl.recv((u8*)&*dest, recvCount * sizeof(block) *
   //   mCorrectionVals.stride());
 
   // update the index of there we should store the next set of correction
   // values.
-  mCorrectionIdx += recvCount;
+  mCorrectionIdx += num_otext;
   return 0;
 }
-int kkrt_sender::encode(u64 otIdx, const void* input, void* dest,
-                        u64 destSize) {
+int kkrt_sender::_encode(int otIdx, const void* input, void* dest,
+                         int destSize) {
 #ifndef NDEBUG
-  if (eq(mCorrectionVals[otIdx][0], ZeroBlock))
-    throw std::invalid_argument(
-        "appears that we haven't received the receiver's choice "
-        "yet. " LOCATION);
+  if (eq(mCorrectionVals[otIdx][0], ZeroBlock)) return -1000;
 #endif  // !NDEBUG
 #define KKRT_WIDTH 4
   // static const int width(4);
-
   block word = ZeroBlock;
   memcpy(&word, input, mInputByteCount);
-
   std::array<block, KKRT_WIDTH> choice{word, word, word, word}, code;
   mMultiKeyAES.ecbEncNBlocks(choice.data(), code.data());
 
@@ -204,7 +212,6 @@ int kkrt_sender::encode(u64 otIdx, const void* input, void* dest,
     code[i] = tVal[i] ^ t1;
   }
 #endif
-
   if (_hash) {
     _hash->hasher_reset();
     _hash->hasher_update((char*)code.data(), sizeof(block) * mT.stride());
@@ -223,20 +230,20 @@ int kkrt_sender::encode(u64 otIdx, const void* input, void* dest,
   //   memcpy(dest, (char*)&val, std::min(destSize, sizeof(block)));
   memcpy(dest, (char*)&val, sizeof(block));
   return 0;
-  ;
 }
 
-int kkrt_sender::encode_all(int numOTExt,
-                            const std::vector<std::vector<oc::u32>>& inputs,
-                            std::vector<std::vector<block>>& out_mask) {
-  out_mask.resize(numOTExt);
-  for (auto i = 0ull; i < numOTExt; ++i) {
+int kkrt_sender::encode_all(int num_otext,
+                            const vector<vector<uint32_t>>& inputs,
+                            vector<vector<block>>& out_mask) {
+  out_mask.resize(num_otext);
+  if (num_otext != inputs.size()) return -100;
+  for (auto i = 0; i < num_otext; ++i) {
     int input_num_i = inputs[i].size();
     out_mask[i].resize(input_num_i);
     oc::block* begin = (oc::block*)out_mask[i].data();
-    for (auto j = 0ull; j < input_num_i; ++j) {
+    for (auto j = 0; j < input_num_i; ++j) {
       *(begin + j) = oc::toBlock(inputs[i][j]);
-      encode(i, begin + j, begin + j, 16);
+      _encode(i, begin + j, begin + j, 16);
     }
   }
   return 0;
@@ -262,8 +269,7 @@ kkrt_receiver::~kkrt_receiver() {
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "~kkrt_receiver");
 }
 int kkrt_receiver::get_base_ot_count() { return mGens.size(); };
-int kkrt_receiver::set_base_ot(
-    const std::vector<std::array<oc::block, 2>>& base_pair_keys) {
+int kkrt_receiver::set_base_ot(const vector<array<block, 2>>& base_pair_keys) {
   if (base_pair_keys.size() != mGens.size()) return -1;
   // mGens.resize(baseRecvOts.size());
   mGensBlkIdx.resize(base_pair_keys.size(), 0);
@@ -271,12 +277,13 @@ int kkrt_receiver::set_base_ot(
     mGens[i][0].setKey(base_pair_keys[i][0]);
     mGens[i][1].setKey(base_pair_keys[i][1]);
   }
+  _has_base_ot = true;
   return 0;
 };
-int kkrt_receiver::init(int numOtExt) {
+int kkrt_receiver::_init(int numOtExt) {
   //   if (hasBaseOts() == false) throw std::runtime_error("rt error at "
   //   LOCATION);
-  block common_key = toBlock(0xaa, 0xff);
+  block common_key = toBlock(0xaabbccdd, 0xffee7788);
   std::array<block, 4> keys;
   PRNG(common_key).get(keys.data(), keys.size());
   mMultiKeyAES.setKeys(keys);
@@ -376,8 +383,8 @@ int kkrt_receiver::init(int numOtExt) {
   return 0;
 }
 
-int kkrt_receiver::encode(u64 otIdx, const void* input, void* dest,
-                          u64 destSize) {
+int kkrt_receiver::_encode(int otIdx, const void* input, void* dest,
+                           int destSize) {
   static const int width(4);
 #ifndef NDEBUG
   if (mT0.stride() != width) return -1002;
@@ -422,19 +429,7 @@ int kkrt_receiver::encode(u64 otIdx, const void* input, void* dest,
     for (u64 i = 0; i < mT0.stride(); ++i) val = val ^ aesBuff[i] ^ t0Val[i];
     memcpy(dest, &val, 16);
   }
-// #ifdef KKRT_SHA_HASH
 
-//   // now hash it to remove the correlation.
-//   RandomOracle sha1(destSize);
-//   sha1.Update((u8*)mT0[otIdx].data(), mT0[otIdx].size() * sizeof(block));
-//   sha1.Final((u8*)dest);
-// #else
-//   std::array<block, 10> aesBuff;
-//   mAesFixedKey.ecbEncBlocks(t0Val, mT0.stride(), aesBuff.data());
-
-//   val = ZeroBlock;
-//   for (u64 i = 0; i < mT0.stride(); ++i) val = val ^ aesBuff[i] ^ t0Val[i];
-// #endif
 #ifndef NDEBUG
   // a debug check to mark this OT as used and ready to send.
   mT0[otIdx][0] = AllOneBlock;
@@ -442,7 +437,7 @@ int kkrt_receiver::encode(u64 otIdx, const void* input, void* dest,
   return 0;
 }
 
-int kkrt_receiver::sendCorrection(conn* sock, oc::u64 sendCount) {
+int kkrt_receiver::send_correction(conn* sock, int sendCount) {
 #ifndef NDEBUG
   // make sure these OTs all contain valid correction values, aka encode has
   // been called.
@@ -464,13 +459,24 @@ int kkrt_receiver::sendCorrection(conn* sock, oc::u64 sendCount) {
   return 0;
 }
 
-int kkrt_receiver::encode_all(int numOTExt, const std::vector<oc::u32>& inputs,
-                              std::vector<block>& out_mask) {
+int kkrt_receiver::encode_all(int numOTExt, const vector<uint32_t>& inputs,
+                              vector<block>& out_mask, conn* sock) {
+  if (!_has_base_ot) {
+    int base_ot_num = get_base_ot_count();
+    iknp_sender iknp;
+    ote_sender* ote = &iknp;
+    vector<array<block, 2>> pair_keys(base_ot_num);
+    int fg = ote->send(pair_keys, sock);
+    if (fg) return -1000;
+    fg = set_base_ot(pair_keys);
+    if (fg) return -1001;
+  }
+  _init(numOTExt);
   out_mask.resize(numOTExt);
   auto begin = out_mask.data();
   for (auto k = 0ull; k < numOTExt; ++k) {
     *(begin + k) = oc::toBlock(inputs[k]);
-    encode(k, begin + k, begin + k, 16);
+    _encode(k, begin + k, begin + k, 16);
   }
   return 0;
 }

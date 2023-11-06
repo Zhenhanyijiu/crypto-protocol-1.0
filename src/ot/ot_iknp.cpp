@@ -21,8 +21,8 @@ iknp_sender::~iknp_sender() {
 int iknp_sender::set_base_ot(const oc::BitVector &base_choices,
                              const std::vector<oc::block> &base_single_keys) {
   int base_num = base_choices.size();
-  if (base_num < base_ot_count) return -1;
-  for (size_t i = 0; i < base_ot_count; i++) {
+  if (base_num < BaseOtCount) return -1;
+  for (size_t i = 0; i < BaseOtCount; i++) {
     mGens[i].SetSeed(base_single_keys[i]);
     mBaseChoiceBits = base_choices;
   }
@@ -35,13 +35,13 @@ int iknp_sender::send(std::vector<std::array<oc::block, 2>> &encMsgOutput,
     np99receiver otbase;
     otreceiver *ot = &otbase;
     oc::PRNG rng(oc::sysRandomSeed());
-    oc::BitVector chs(base_ot_count);
+    oc::BitVector chs(BaseOtCount);
     chs.randomize(rng);
-    vector<block> single_keys(base_ot_count);
+    vector<block> single_keys(BaseOtCount);
     int fg = ot->receive(chs, single_keys, sock);
     if (fg) return fg;
     //
-    for (size_t i = 0; i < base_ot_count; i++) {
+    for (size_t i = 0; i < BaseOtCount; i++) {
       mGens[i].SetSeed(single_keys[i]);
       mBaseChoiceBits = chs;
     }
@@ -61,7 +61,7 @@ int iknp_sender::send(std::vector<std::array<oc::block, 2>> &encMsgOutput,
 
   std::array<block, 128> choiceMask;
   block delta = *(block *)this->mBaseChoiceBits.data();
-  for (u64 i = 0; i < base_ot_count; ++i) {
+  for (u64 i = 0; i < BaseOtCount; ++i) {
     if (this->mBaseChoiceBits[i])
       choiceMask[i] = AllOneBlock;
     else
@@ -199,8 +199,8 @@ iknp_receiver::~iknp_receiver() {
 int iknp_receiver::set_base_ot(
     std::vector<std::array<oc::block, 2>> &base_pair_keys) {
   int base_num = base_pair_keys.size();
-  if (base_num < base_ot_count) return -1;
-  for (size_t i = 0; i < base_ot_count; i++) {
+  if (base_num < BaseOtCount) return -1;
+  for (size_t i = 0; i < BaseOtCount; i++) {
     mGens[i][0].SetSeed(base_pair_keys[i][0]);
     mGens[i][1].SetSeed(base_pair_keys[i][1]);
   }
@@ -216,11 +216,11 @@ int iknp_receiver::receive(const oc::BitVector &choicesWidthInput,
     // oc::PRNG rng(oc::sysRandomSeed());
     // oc::BitVector chs(base_ot_count);
     // chs.randomize(rng);
-    vector<array<block, 2>> pair_keys(base_ot_count);
+    vector<array<block, 2>> pair_keys(BaseOtCount);
     int fg = ot->send(pair_keys, sock);
     if (fg) return fg;
     //
-    for (size_t i = 0; i < base_ot_count; i++) {
+    for (size_t i = 0; i < BaseOtCount; i++) {
       mGens[i][0].SetSeed(pair_keys[i][0]);
       mGens[i][1].SetSeed(pair_keys[i][1]);
     }

@@ -12,6 +12,7 @@ void test_kkrt_sender(const vector<vector<u32>>& inputs,
   int numOTExt = inputs.size();
   connection c(0, "127.0.0.1", 9001);
   kkrt_sender kkrt;
+#if 0
   int base_ot_num = kkrt.get_base_ot_count();
   BitVector base_choices(base_ot_num);
   PRNG rng(sysRandomSeed());
@@ -23,10 +24,10 @@ void test_kkrt_sender(const vector<vector<u32>>& inputs,
   if (fg) {
     SPDLOG_LOGGER_ERROR(spdlog::default_logger(), "ote error");
   }
-  //
+
   kkrt.set_base_ot(base_choices, single_keys);
-  kkrt.init(numOTExt);
-  kkrt.recvCorrection(&c, numOTExt);
+#endif
+  kkrt.recv_correction(&c, numOTExt);
   kkrt.encode_all(numOTExt, inputs, out_masks);
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "kkrt sender sendBytes:{} B",
                      (&c)->send_bytes_count());
@@ -38,10 +39,8 @@ void test_kkrt_receiver(const vector<u32>& choices, vector<block>& out_masks) {
   int numOTExt = choices.size();
   connection c(1, "127.0.0.1", 9001);
   kkrt_receiver kkrt;
+#if 0
   int base_ot_num = kkrt.get_base_ot_count();
-  //   BitVector base_choices(base_ot_num);
-  //   PRNG rng(sysRandomSeed());
-  //   base_choices.randomize(rng);
   iknp_sender iknp;
   ote_sender* ote = &iknp;
   vector<array<block, 2>> pair_keys(base_ot_num);
@@ -51,9 +50,10 @@ void test_kkrt_receiver(const vector<u32>& choices, vector<block>& out_masks) {
   }
   //
   kkrt.set_base_ot(pair_keys);
-  kkrt.init(numOTExt);
-  kkrt.encode_all(numOTExt, choices, out_masks);
-  kkrt.sendCorrection(&c, numOTExt);
+#endif
+  kkrt.encode_all(numOTExt, choices, out_masks, &c);
+  kkrt.send_correction(&c, numOTExt);
+  //  解密
 
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "kkrt recver sendBytes:{} B",
                      (&c)->send_bytes_count());
