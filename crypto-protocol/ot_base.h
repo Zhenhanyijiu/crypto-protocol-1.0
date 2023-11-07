@@ -10,6 +10,7 @@ class np99sender : public otsender {
  private:
   std::unique_ptr<curve> _ecc;
   std::unique_ptr<hasher> _hash;
+  void _np99sender(const config_param& param);
 
  public:
   np99sender();
@@ -21,6 +22,7 @@ class np99receiver : public otreceiver {
  private:
   std::unique_ptr<curve> _ecc;
   std::unique_ptr<hasher> _hash;
+  void _np99receiver(const config_param& param);
 
  public:
   np99receiver();

@@ -20,5 +20,7 @@ void blake3::hasher_update(const char *input, int input_len) {
 void blake3::hasher_final(char *out, int out_len) {
   blake3_hasher_finalize(&this->hasher, (uint8_t *)out, out_len);
 }
-}  // namespace fucrypto
+std::unique_ptr<hasher> new_blake3() { return std::make_unique<blake3>(); }
+std::unique_ptr<hasher> new_sha256() { return std::make_unique<sha256>(); }
 
+}  // namespace fucrypto

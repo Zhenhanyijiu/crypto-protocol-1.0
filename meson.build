@@ -48,7 +48,7 @@ crypto_compile_args = [
 
 # absl_dep = dependency('absl', modules: ['absl::base', 'absl::variant', 'absl::strings'])
 # boring_dep = dependency('openssl') # pkgconf是根据文件名的区分的(openssl.pc), 而不是pc文件中的Name字段(Name: BoringSSL)
-openssl_dep = dependency('open_openssl') # pkgconf是根据文件名的区分的(openssl.pc), 而不是pc文件中的Name字段(Name: BoringSSL)
+openssl_dep = dependency('openssl') # pkgconf是根据文件名的区分的(openssl.pc), 而不是pc文件中的Name字段(Name: BoringSSL)
 blake3_dep = dependency('blake3') # 
 # thread_dep = dependency('threads')
 spdlog_dep = dependency('spdlog')

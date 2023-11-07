@@ -34,15 +34,29 @@ struct np99_msg_PKs {
   }
 };
 np99sender::np99sender() : otsender() {
-  _ecc = move((*ecc_lib_map)["openssl"]->new_curve("secp256k1"));
-  _hash = move(make_unique<sha256>());
+  //   _ecc = move((*ecc_lib_map)["openssl"]->new_curve("secp256k1"));
+  //   _hash = move(make_unique<sha256>());
+  config_param param;
+  _np99sender(param);
 };
 np99sender::np99sender(const config_param& param) : otsender() {
-  _ecc = move((*ecc_lib_map)[param.ecc_lib_name]->new_curve(param.curve_name));
-  _hash = move(make_unique<sha256>());
-  //   auto x = _ecc->new_bn();
-  //   x->from_dec("12345");
-  //   x->print();
+  _np99sender(param);
+};
+void np99sender::_np99sender(const config_param& param) {
+  string ecc_lib_name = param.ecc_lib_name;
+  string hasher_name = param.hasher_name;
+  string curve_name = param.curve_name;
+  auto isok = ecc_lib_map->find(ecc_lib_name);
+  if (isok == ecc_lib_map->end())
+    ecc_lib_name = default_config_param.ecc_lib_name;
+  auto isok2 = (*hasher_map_ptr).find(hasher_name);
+  if (isok2 == hasher_map_ptr->end())
+    hasher_name = default_config_param.hasher_name;
+  _ecc = move((*ecc_lib_map)[ecc_lib_name]->new_curve(curve_name));
+  _hash = move((*hasher_map_ptr)[hasher_name]());
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     ">> np99sender hasher:{},ecclib:{},curve_name:{}",
+                     hasher_name, ecc_lib_name, curve_name);
 };
 np99sender::~np99sender() {
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "~np99sender free");
@@ -119,12 +133,29 @@ int np99sender::send(std::vector<std::array<oc::block, 2>>& pair_keys,
 };
 /************* np99receiver **************/
 np99receiver::np99receiver() : otreceiver() {
-  _ecc = move((*ecc_lib_map)["openssl"]->new_curve("secp256k1"));
-  _hash = move(make_unique<sha256>());
+  //   _ecc = move((*ecc_lib_map)["openssl"]->new_curve("secp256k1"));
+  //   _hash = move(make_unique<sha256>());
+  config_param param;
+  _np99receiver(param);
 };
 np99receiver::np99receiver(const config_param& param) : otreceiver() {
-  _ecc = move((*ecc_lib_map)[param.ecc_lib_name]->new_curve(param.curve_name));
-  _hash = move(make_unique<sha256>());
+  _np99receiver(param);
+};
+void np99receiver::_np99receiver(const config_param& param) {
+  string ecc_lib_name = param.ecc_lib_name;
+  string hasher_name = param.hasher_name;
+  string curve_name = param.curve_name;
+  auto isok = ecc_lib_map->find(ecc_lib_name);
+  if (isok == ecc_lib_map->end())
+    ecc_lib_name = default_config_param.ecc_lib_name;
+  auto isok2 = (*hasher_map_ptr).find(hasher_name);
+  if (isok2 == hasher_map_ptr->end())
+    hasher_name = default_config_param.hasher_name;
+  _ecc = move((*ecc_lib_map)[ecc_lib_name]->new_curve(curve_name));
+  _hash = move((*hasher_map_ptr)[hasher_name]());
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     ">> np99receiver hasher:{},ecclib:{},curve_name:{}",
+                     hasher_name, ecc_lib_name, curve_name);
 };
 np99receiver::~np99receiver() {
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "~np99receiver free");

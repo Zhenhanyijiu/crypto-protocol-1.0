@@ -14,12 +14,14 @@ source_files = files(
   'tools/fulog.cpp',
   'tools/tcpsocket.cpp',
   'hash/hasherimpl.cpp',
+  'hash/hasher.cpp',
   'ecc/eccopenssl.cpp',  
   'ecc/fuecc_open.cpp',  
   'ecc/fuecc.cpp',
   'ot/ot_base.cpp',
   'ot/ot_iknp.cpp',  
   'ot/kkrt.cpp',
+  'ot/ot_interface.cpp',
 )
 
 crypto_lib = library('crypto_protocol',

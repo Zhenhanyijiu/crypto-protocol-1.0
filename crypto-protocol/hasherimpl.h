@@ -31,6 +31,8 @@ class blake3 : public hasher {
   void hasher_update(const char *input, int input_len);
   void hasher_final(char *out, int out_len);
 };
+extern std::unique_ptr<hasher> new_blake3();
+extern std::unique_ptr<hasher> new_sha256();
 }  // namespace fucrypto
 
 // #if defined(__cplusplus) || defined(c_plusplus)
