@@ -59,22 +59,37 @@ class ote_receiver {
 };
 // enum OT_ROLE { SENDER, RECEIVER };
 
-class OTFactory {
- private:
- public:
-  OTFactory();
-  ~OTFactory();
-  template <typename T, typename T1>
-  std::unique_ptr<T> new_ot_sender(const config_param& param) {
-    return std::make_unique<T1>(param);
-  }
-  template <typename T, typename T1>
-  std::unique_ptr<T> new_ot_receiver(const config_param& param) {
-    return std::make_unique<T1>(param);
-  }
-};
+// class OTFactory {
+//  private:
+//  public:
+//   OTFactory();
+//   ~OTFactory();
+//   template <typename T, typename T1>
+//   std::unique_ptr<T> new_ot_sender(const config_param& param) {
+//     return std::make_unique<T1>(param);
+//   }
+//   template <typename T, typename T1>
+//   std::unique_ptr<T> new_ot_receiver(const config_param& param) {
+//     return std::make_unique<T1>(param);
+//   }
+// };
 
-extern OTFactory* ot_factory_ptr;
+// extern OTFactory* ot_factory_ptr;
+// BASE OT
+extern std::unique_ptr<otsender> new_base_ot_sender(const config_param& param);
+extern std::unique_ptr<otreceiver> new_base_ot_receiver(
+    const config_param& param);
+
+// BASE OTE
+extern std::unique_ptr<ote_sender> new_ote_sender(const config_param& param);
+extern std::unique_ptr<ote_receiver> new_ote_receiver(
+    const config_param& param);
+
+// 1ooN KKRT
+// extern std::unique_ptr<> new_ote_sender(const config_param& param);
+// extern std::unique_ptr<ote_receiver> new_ote_receiver(
+//     const config_param& param);
+
 // typedef std::unique_ptr<otsender> (*NewBaseOtSenderFunc)();
 // typedef std::unique_ptr<otreceiver> (*NewBaseOtReceiverFunc)();
 // typedef std::unique_ptr<ote_sender> (*NewOTeSenderFunc)();

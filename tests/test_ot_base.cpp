@@ -28,7 +28,7 @@ static void test_np99sender(int ot_num, vector<array<oc::block, 2>>& pair_keys,
   //   param.curve_name = name;
   //   np99sender np_sender(param);
   //   otsender* ot = &np_sender;
-  auto ot = ot_factory_ptr->new_ot_sender<otsender, np99sender>(param);
+  auto ot = new_base_ot_sender(param);
   // vector<array<oc::block, 2>> pair_keys(ot_num);
   int fg = ot->send(pair_keys, &c);
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "ot sender sendBytes:{} B",
@@ -61,7 +61,7 @@ static void test_np99receiver(int ot_num, vector<oc::block>& single_keys,
   //   param.curve_name = name;
   //   np99receiver np_recver(param);
   //   otreceiver* ot = &np_recver;
-  auto ot = ot_factory_ptr->new_ot_receiver<otreceiver, np99receiver>(param);
+  auto ot = new_base_ot_receiver(param);
   //   oc::BitVector choices(ot_num);
   //   choices.randomize(rng);
   int fg = ot->receive(choices, single_keys, &c);

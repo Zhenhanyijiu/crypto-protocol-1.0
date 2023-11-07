@@ -7,6 +7,7 @@ const oc::u32 BaseOtCount(128);
 
 class iknp_sender : public ote_sender {
  private:
+  config_param _param;
   std::array<oc::PRNG, BaseOtCount> mGens;
   oc::BitVector mBaseChoiceBits;
   bool _has_base_ot = false;
@@ -23,6 +24,7 @@ class iknp_sender : public ote_sender {
 ///////////// iknp_receiver //////////
 class iknp_receiver : public ote_receiver {
  private:
+  config_param _param;
   std::array<std::array<oc::PRNG, 2>, BaseOtCount> mGens;
   bool _has_base_ot = false;
 
