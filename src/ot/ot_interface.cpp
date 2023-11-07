@@ -32,12 +32,12 @@ std::unique_ptr<otreceiver> new_base_ot_receiver(const config_param& param) {
   return nullptr;
 }
 std::unique_ptr<ote_sender> new_ote_sender(const config_param& param) {
-  if (param.ot_name == "iknp") return make_unique<iknp_sender>(param);
+  if (param.ote_name == "iknp") return make_unique<iknp_sender>(param);
   //   可以继续添加
   return nullptr;
 };
 std::unique_ptr<ote_receiver> new_ote_receiver(const config_param& param) {
-  if (param.ot_name == "iknp") return make_unique<iknp_receiver>(param);
+  if (param.ote_name == "iknp") return make_unique<iknp_receiver>(param);
   //   可以继续添加
   return nullptr;
 };

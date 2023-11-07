@@ -7,6 +7,7 @@ namespace fucrypto {
 
 class kkrt_sender {
  private:
+  config_param _param;
   std::unique_ptr<hasher> _hash = nullptr;
   std::vector<oc::AES> mGens;
   oc::u64 mCorrectionIdx, mInputByteCount;
@@ -34,6 +35,7 @@ class kkrt_sender {
 /////////////////
 class kkrt_receiver {
  private:
+  config_param _param;
   std::unique_ptr<hasher> _hash = nullptr;
   std::vector<std::array<oc::AES, 2>> mGens;
   std::vector<oc::u64> mGensBlkIdx;

@@ -14,6 +14,7 @@ kkrt_sender::kkrt_sender() {
   mGens.resize(128 * 4);
 }
 kkrt_sender::kkrt_sender(const config_param& param) {
+  _param = param;
   // hash 先不配置
   u64 statSecParam = 40;
   u64 inputBitCount = 128;
@@ -131,8 +132,12 @@ int kkrt_sender::_init(int numOTExt) {
 int kkrt_sender::recv_correction(conn* sock, int num_otext) {
   if (!_has_base_ot) {
     int base_num = get_base_ot_count();
-    iknp_receiver iknp;
-    ote_receiver* ote = &iknp;
+    // iknp_receiver iknp;
+    // ote_receiver* ote = &iknp;
+    auto ote = new_ote_receiver(_param);
+    SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                       "== kkrt_sender new_ote_receiver");
+
     BitVector chs(base_num);
     PRNG rng(sysRandomSeed());
     chs.randomize(rng);
@@ -141,6 +146,8 @@ int kkrt_sender::recv_correction(conn* sock, int num_otext) {
     if (fg) return fg;
     fg = set_base_ot(chs, single_keys);
     if (fg) return fg;
+    SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                       "== kkrt_sender _has_base_ot end");
   }
   _init(num_otext);
 #ifndef NDEBUG
@@ -259,6 +266,7 @@ kkrt_receiver::kkrt_receiver() {
 }
 
 kkrt_receiver::kkrt_receiver(const config_param& param) {
+  _param = param;
   u64 statSecParam = 40;
   u64 inputBitCount = 128;
   mInputByteCount = (inputBitCount + 7) / 8;
@@ -463,13 +471,19 @@ int kkrt_receiver::encode_all(int numOTExt, const vector<uint32_t>& inputs,
                               vector<block>& out_mask, conn* sock) {
   if (!_has_base_ot) {
     int base_ot_num = get_base_ot_count();
-    iknp_sender iknp;
-    ote_sender* ote = &iknp;
+    // iknp_sender iknp;
+    // ote_sender* ote = &iknp;
+    auto ote = new_ote_sender(_param);
+    SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                       "== kkrt_receiver new_ote_sender");
+
     vector<array<block, 2>> pair_keys(base_ot_num);
     int fg = ote->send(pair_keys, sock);
     if (fg) return -1000;
     fg = set_base_ot(pair_keys);
     if (fg) return -1001;
+    SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                       "== kkrt_receiver _has_base_ot end");
   }
   _init(numOTExt);
   out_mask.resize(numOTExt);

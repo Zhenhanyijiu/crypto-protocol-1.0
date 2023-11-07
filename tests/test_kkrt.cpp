@@ -8,17 +8,19 @@ using namespace oc;
 using namespace fucrypto;
 
 void test_kkrt_sender(const vector<vector<u32>>& inputs,
-                      vector<vector<block>>& out_masks) {
+                      vector<vector<block>>& out_masks, config_param& param) {
   int numOTExt = inputs.size();
   connection c(0, "127.0.0.1", 9001);
-  kkrt_sender kkrt;
+  kkrt_sender kkrt(param);
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "kkrt_sender create");
 #if 0
   int base_ot_num = kkrt.get_base_ot_count();
   BitVector base_choices(base_ot_num);
   PRNG rng(sysRandomSeed());
   base_choices.randomize(rng);
-  iknp_receiver iknp;
-  ote_receiver* ote = &iknp;
+  //   iknp_receiver iknp;
+  //   ote_receiver* ote = &iknp;
+  auto ote = new_ote_receiver(param);
   vector<block> single_keys(base_ot_num);
   int fg = ote->receive(base_choices, single_keys, &c);
   if (fg) {
@@ -35,14 +37,18 @@ void test_kkrt_sender(const vector<vector<u32>>& inputs,
                      (&c)->recv_bytes_count());
 }
 
-void test_kkrt_receiver(const vector<u32>& choices, vector<block>& out_masks) {
+void test_kkrt_receiver(const vector<u32>& choices, vector<block>& out_masks,
+                        config_param& param) {
   int numOTExt = choices.size();
   connection c(1, "127.0.0.1", 9001);
-  kkrt_receiver kkrt;
+  kkrt_receiver kkrt(param);
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "kkrt_receiver create");
+
 #if 0
   int base_ot_num = kkrt.get_base_ot_count();
-  iknp_sender iknp;
-  ote_sender* ote = &iknp;
+  //   iknp_sender iknp;
+  //   ote_sender* ote = &iknp;
+  auto ote = new_ote_sender(param);
   vector<array<block, 2>> pair_keys(base_ot_num);
   int fg = ote->send(pair_keys, &c);
   if (fg) {
@@ -66,6 +72,9 @@ int main_test(int argc, char** argv) {
   if (argc > 1) num_Ote = atoi(argv[1]);
   int N = 3;
   if (argc > 2) N = atoi(argv[2]);
+  config_param param;
+  param.hasher_name = "blake3";
+  //   ;
   vector<vector<u32>> inputs(num_Ote);
   for (size_t i = 0; i < num_Ote; i++) {
     for (size_t j = 0; j < N; j++) {
@@ -73,13 +82,13 @@ int main_test(int argc, char** argv) {
     }
   }
   vector<vector<block>> out_masks;
-  thread th1(test_kkrt_sender, ref(inputs), ref(out_masks));
+  thread th1(test_kkrt_sender, ref(inputs), ref(out_masks), ref(param));
   vector<u32> choices(num_Ote);
   for (size_t i = 0; i < num_Ote; i++) {
     choices[i] = rand() % N;
   }
   vector<block> out_dec_masks;
-  thread th2(test_kkrt_receiver, ref(choices), ref(out_dec_masks));
+  thread th2(test_kkrt_receiver, ref(choices), ref(out_dec_masks), ref(param));
   th1.join();
   th2.join();
   //   check
