@@ -20,13 +20,13 @@ config_param default_config_param;
 // OTFactory* ot_factory_ptr = &ot_factory;
 
 // new object
-std::unique_ptr<otsender> new_base_ot_sender(const config_param& param) {
+std::unique_ptr<ot_sender> new_base_ot_sender(const config_param& param) {
   if (param.ot_name == "np99") return make_unique<np99sender>(param);
   //   可以继续添加
 
   return nullptr;
 }
-std::unique_ptr<otreceiver> new_base_ot_receiver(const config_param& param) {
+std::unique_ptr<ot_receiver> new_base_ot_receiver(const config_param& param) {
   if (param.ot_name == "np99") return make_unique<np99receiver>(param);
   //   可以继续添加
   return nullptr;

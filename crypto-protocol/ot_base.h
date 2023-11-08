@@ -6,7 +6,7 @@
 #include "crypto-protocol/hasherimpl.h"
 
 namespace fucrypto {
-class np99sender : public otsender {
+class np99sender : public ot_sender {
  private:
   std::unique_ptr<curve> _ecc;
   std::unique_ptr<hasher> _hash;
@@ -18,7 +18,7 @@ class np99sender : public otsender {
   ~np99sender();
   int send(std::vector<std::array<oc::block, 2>>& pair_keys, conn* sock);
 };
-class np99receiver : public otreceiver {
+class np99receiver : public ot_receiver {
  private:
   std::unique_ptr<curve> _ecc;
   std::unique_ptr<hasher> _hash;

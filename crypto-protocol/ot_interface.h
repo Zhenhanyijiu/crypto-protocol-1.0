@@ -19,19 +19,19 @@ struct config_param {
   std::string hasher_name = "sha256";
 };
 extern config_param default_config_param;
-class otsender {
+class ot_sender {
  public:
-  otsender(){};
+  ot_sender(){};
   //   otsender(const config_param& param){};
-  virtual ~otsender(){};
+  virtual ~ot_sender(){};
   virtual int send(std::vector<std::array<oc::block, 2>>& pair_keys,
                    conn* sock) = 0;
 };
-class otreceiver {
+class ot_receiver {
  private:
  public:
-  otreceiver(){};
-  virtual ~otreceiver(){};
+  ot_receiver(){};
+  virtual ~ot_receiver(){};
   virtual int receive(const oc::BitVector& choices,
                       std::vector<oc::block>& single_keys, conn* sock) = 0;
 };
@@ -76,8 +76,8 @@ class ote_receiver {
 
 // extern OTFactory* ot_factory_ptr;
 // BASE OT
-extern std::unique_ptr<otsender> new_base_ot_sender(const config_param& param);
-extern std::unique_ptr<otreceiver> new_base_ot_receiver(
+extern std::unique_ptr<ot_sender> new_base_ot_sender(const config_param& param);
+extern std::unique_ptr<ot_receiver> new_base_ot_receiver(
     const config_param& param);
 
 // BASE OTE

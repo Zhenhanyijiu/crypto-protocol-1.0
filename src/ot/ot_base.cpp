@@ -33,13 +33,13 @@ struct np99_msg_PKs {
     ar(pks);
   }
 };
-np99sender::np99sender() : otsender() {
+np99sender::np99sender() : ot_sender() {
   //   _ecc = move((*ecc_lib_map)["openssl"]->new_curve("secp256k1"));
   //   _hash = move(make_unique<sha256>());
   config_param param;
   _np99sender(param);
 };
-np99sender::np99sender(const config_param& param) : otsender() {
+np99sender::np99sender(const config_param& param) : ot_sender() {
   _np99sender(param);
 };
 void np99sender::_np99sender(const config_param& param) {
@@ -132,13 +132,13 @@ int np99sender::send(std::vector<std::array<oc::block, 2>>& pair_keys,
   return 0;
 };
 /************* np99receiver **************/
-np99receiver::np99receiver() : otreceiver() {
+np99receiver::np99receiver() : ot_receiver() {
   //   _ecc = move((*ecc_lib_map)["openssl"]->new_curve("secp256k1"));
   //   _hash = move(make_unique<sha256>());
   config_param param;
   _np99receiver(param);
 };
-np99receiver::np99receiver(const config_param& param) : otreceiver() {
+np99receiver::np99receiver(const config_param& param) : ot_receiver() {
   _np99receiver(param);
 };
 void np99receiver::_np99receiver(const config_param& param) {

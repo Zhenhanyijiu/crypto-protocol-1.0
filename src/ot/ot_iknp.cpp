@@ -37,7 +37,7 @@ int iknp_sender::send(std::vector<std::array<oc::block, 2>> &encMsgOutput,
     // np99receiver otbase;
     // otreceiver *ot = &otbase;
     // 需要一个 base ot receiver
-    unique_ptr<otreceiver> ot = new_base_ot_receiver(_param);
+    unique_ptr<ot_receiver> ot = new_base_ot_receiver(_param);
     oc::PRNG rng(oc::sysRandomSeed());
     oc::BitVector chs(BaseOtCount);
     chs.randomize(rng);
@@ -222,7 +222,7 @@ int iknp_receiver::receive(const oc::BitVector &choicesWidthInput,
     // oc::PRNG rng(oc::sysRandomSeed());
     // oc::BitVector chs(base_ot_count);
     // chs.randomize(rng);
-    unique_ptr<otsender> ot = new_base_ot_sender(_param);
+    unique_ptr<ot_sender> ot = new_base_ot_sender(_param);
     vector<array<block, 2>> pair_keys(BaseOtCount);
     int fg = ot->send(pair_keys, sock);
     if (fg) return fg;
