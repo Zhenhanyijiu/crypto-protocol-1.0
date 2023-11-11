@@ -3,8 +3,9 @@
 #include "crypto-protocol/ot_interface.h"
 #include <bits/stdc++.h>
 namespace fucrypto {
-const oc::u32 BaseOtCount(128);
+#define err_code_iknp 1001
 
+const oc::u32 BaseOtCount(128);
 class iknp_sender : public ote_sender {
  private:
   config_param _param;

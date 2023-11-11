@@ -1,6 +1,7 @@
 #include "crypto-protocol/ote_iknp.h"
 #include "crypto-protocol/kkrt.h"
 #include "crypto-protocol/fulog.h"
+#include "crypto-protocol/utils.h"
 #include "cryptoTools/Common/Defines.h"
 #include "cryptoTools/Common/tools.h"
 #include <bits/stdc++.h>
@@ -27,8 +28,8 @@ kkrt_sender::~kkrt_sender() {
 int kkrt_sender::get_base_ot_count() { return mGens.size(); }
 int kkrt_sender::set_base_ot(const BitVector& base_choices,
                              const vector<block>& base_single_keys) {
-  if (base_choices.size() != u64(base_single_keys.size())) return -1;
-  if (base_choices.size() != u64(mGens.size())) return -2;
+  if (base_choices.size() != u64(base_single_keys.size())) return err_code_kkrt;
+  if (base_choices.size() != u64(mGens.size())) return err_code_kkrt;
   mBaseChoiceBits = base_choices;  // 512个 0-1
   //   mGens.resize(choices.size());
   mGensBlkIdx.resize(base_choices.size(), 0);
@@ -130,6 +131,14 @@ int kkrt_sender::_init(int numOTExt) {
 
 //
 int kkrt_sender::recv_correction(conn* sock, int num_otext) {
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "kkrt_sender recv_correction start");
+  string err_info = "";
+  scope_guard on_error_exit([&]() {
+    sock->close();
+    SPDLOG_LOGGER_ERROR(spdlog::default_logger(),
+                        "kkrt sender recv_correction err_info:{}", err_info);
+  });
   if (!_has_base_ot) {
     int base_num = get_base_ot_count();
     // iknp_receiver iknp;
@@ -160,8 +169,10 @@ int kkrt_sender::recv_correction(conn* sock, int num_otext) {
       mCorrectionVals.begin() + (mCorrectionIdx * mCorrectionVals.stride());
   //   大小固定
   string ot_data = sock->recv();
-  assert(ot_data.size() ==
-         num_otext * sizeof(block) * mCorrectionVals.stride());
+  //   assert(ot_data.size() ==
+  //          num_otext * sizeof(block) * mCorrectionVals.stride());
+  if (ot_data.size() != num_otext * sizeof(block) * mCorrectionVals.stride())
+    return err_code_kkrt;
   memcpy((u8*)&*dest, ot_data.data(),
          num_otext * sizeof(block) * mCorrectionVals.stride());
   //   chl.recv((u8*)&*dest, recvCount * sizeof(block) *
@@ -170,6 +181,9 @@ int kkrt_sender::recv_correction(conn* sock, int num_otext) {
   // update the index of there we should store the next set of correction
   // values.
   mCorrectionIdx += num_otext;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "kkrt_sender recv_correction end ...");
+  on_error_exit.dismiss();
   return 0;
 }
 int kkrt_sender::_encode(int otIdx, const void* input, void* dest,
@@ -278,7 +292,7 @@ kkrt_receiver::~kkrt_receiver() {
 }
 int kkrt_receiver::get_base_ot_count() { return mGens.size(); };
 int kkrt_receiver::set_base_ot(const vector<array<block, 2>>& base_pair_keys) {
-  if (base_pair_keys.size() != mGens.size()) return -1;
+  if (base_pair_keys.size() != mGens.size()) return err_code_kkrt;
   // mGens.resize(baseRecvOts.size());
   mGensBlkIdx.resize(base_pair_keys.size(), 0);
   for (u64 i = 0; i < mGens.size(); i++) {
@@ -479,9 +493,9 @@ int kkrt_receiver::encode_all(int numOTExt, const vector<uint32_t>& inputs,
 
     vector<array<block, 2>> pair_keys(base_ot_num);
     int fg = ote->send(pair_keys, sock);
-    if (fg) return -1000;
+    if (fg) return fg;
     fg = set_base_ot(pair_keys);
-    if (fg) return -1001;
+    if (fg) return fg;
     SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                        "== kkrt_receiver _has_base_ot end");
   }

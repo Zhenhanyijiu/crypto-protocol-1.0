@@ -4,7 +4,7 @@
 #include "cryptoTools/Common/Matrix.h"
 #include "crypto-protocol/hasher.h"
 namespace fucrypto {
-
+#define err_code_kkrt 1002
 class kkrt_sender {
  private:
   config_param _param;

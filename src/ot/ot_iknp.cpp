@@ -1,6 +1,7 @@
 #include "crypto-protocol/ote_iknp.h"
 #include "crypto-protocol/ot_base.h"
 #include "crypto-protocol/fulog.h"
+#include "crypto-protocol/utils.h"
 #include "cryptoTools/Common/tools.h"
 #include <cereal/types/memory.hpp>
 #include <cereal/types/vector.hpp>
@@ -23,7 +24,7 @@ iknp_sender::~iknp_sender() {
 int iknp_sender::set_base_ot(const oc::BitVector &base_choices,
                              const std::vector<oc::block> &base_single_keys) {
   int base_num = base_choices.size();
-  if (base_num < BaseOtCount) return -1;
+  if (base_num < BaseOtCount) return err_code_iknp;
   for (size_t i = 0; i < BaseOtCount; i++) {
     mGens[i].SetSeed(base_single_keys[i]);
     mBaseChoiceBits = base_choices;
@@ -187,10 +188,8 @@ int iknp_sender::send(std::vector<std::array<oc::block, 2>> &encMsgOutput,
     for (u64 i = 0; i < rem; ++i) {
       mIter[i] = mIter[i] ^ aesHashTemp[i];
     }
-
     doneIdx = stop;
   }
-
   return 0;
 }
 
@@ -205,7 +204,7 @@ iknp_receiver::~iknp_receiver() {
 int iknp_receiver::set_base_ot(
     std::vector<std::array<oc::block, 2>> &base_pair_keys) {
   int base_num = base_pair_keys.size();
-  if (base_num < BaseOtCount) return -1;
+  if (base_num < BaseOtCount) return err_code_iknp;
   for (size_t i = 0; i < BaseOtCount; i++) {
     mGens[i][0].SetSeed(base_pair_keys[i][0]);
     mGens[i][1].SetSeed(base_pair_keys[i][1]);
@@ -216,6 +215,14 @@ int iknp_receiver::set_base_ot(
 int iknp_receiver::receive(const oc::BitVector &choicesWidthInput,
                            std::vector<oc::block> &recoverMsgWidthOutput,
                            conn *sock) {
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "iknp_receiver::receive start ...");
+  string err_info = "";
+  scope_guard on_error_exit([&]() {
+    sock->close();
+    SPDLOG_LOGGER_ERROR(spdlog::default_logger(),
+                        "iknp_receiver::receive,err_info:{}", err_info);
+  });
   if (_has_base_ot == false) {
     // np99sender otbase;
     // otsender *ot = &otbase;
@@ -239,7 +246,7 @@ int iknp_receiver::receive(const oc::BitVector &choicesWidthInput,
   // iknp接收方实际输入的iknpote的个数
   u64 rChoicesSize = choicesWidthInput.size();
   if (rChoicesSize < 0) {
-    return -11;
+    return err_code_iknp;
   }
   //((60+128-1)/128)*128
   u64 numOtExt = roundUpTo(choicesWidthInput.size(), 128);
@@ -382,16 +389,16 @@ int iknp_receiver::receive(const oc::BitVector &choicesWidthInput,
       mIter[7] = mIter[7] ^ aesHashTemp[7];
       mIter += 8;
     }
-
     auto rem = length - steps * 8;
     mAesFixedKey.ecbEncBlocks(mIter, rem, aesHashTemp.data());
     for (u64 i = 0; i < rem; ++i) {
       mIter[i] = mIter[i] ^ aesHashTemp[i];
     }
-
     doneIdx = stop;
   }
-
+  on_error_exit.dismiss();
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "iknp_receiver::receive end ...");
   return 0;
 }
 
