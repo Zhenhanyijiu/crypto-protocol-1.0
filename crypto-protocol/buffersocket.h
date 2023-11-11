@@ -19,6 +19,7 @@ class buffersocket : public conn {
   int close();
   std::string get_msg();
   void set_msg(std::string data);
+  bool has_msg();
 };
 
 }  // namespace fucrypto

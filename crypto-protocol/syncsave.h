@@ -244,6 +244,18 @@ class shared_queue {
     data = queue_.front();
     return true;
   };
+  bool front_not_wait(T& data) {
+    std::unique_lock<std::mutex> mlock(mutex_);
+    while (queue_.empty()) {
+      if (not_wait) {
+        return false;
+      }
+      cond_.wait(mlock);
+    }
+    data = queue_.front();
+    queue_.pop_front();
+    return true;
+  };
   bool front_wait(T& data, int timeout_ms) {
     std::unique_lock<std::mutex> mlock(mutex_);
     int step_len = 1000;

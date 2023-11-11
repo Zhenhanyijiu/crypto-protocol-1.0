@@ -1,6 +1,7 @@
 #include "crypto-protocol/ot_base.h"
 #include "crypto-protocol/fuecc.h"
 #include "crypto-protocol/fulog.h"
+#include "crypto-protocol/utils.h"
 // #include <cereal/types/unordered_map.hpp>
 #include <cereal/types/memory.hpp>
 #include <cereal/types/vector.hpp>
@@ -63,72 +64,102 @@ np99sender::~np99sender() {
 };
 int np99sender::send(std::vector<std::array<oc::block, 2>>& pair_keys,
                      conn* sock) {
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "np99 sender start ...");
+  string err_info = "";
+  //   出现错误时退出，要处理的逻辑，关闭 sock
+  scope_guard on_error_exit([&]() {
+    sock->close();
+    SPDLOG_LOGGER_ERROR(spdlog::default_logger(),
+                        "np99 sender error exit,err_info:{} ...", err_info);
+  });
+  if (_ecc == nullptr || _hash == nullptr || sock == nullptr) return -1000;
   int ot_num = pair_keys.size();
-  if (ot_num <= 0) return 0;
+  if (ot_num <= 0) return err_code_np99;
   //   生成随机点 C
   auto alpha = _ecc->gen_rand_bn();
-  if (!alpha) return -1;
+  if (!alpha) return err_code_np99;
   auto C = _ecc->new_point();
   bool fg = _ecc->scalar_base_mul(alpha.get(), C.get());
-  if (!fg) return -2;
+  if (!fg) return err_code_np99;
   //   alpha
   fg = _ecc->gen_rand_bn(alpha.get());
-  if (!fg) return -3;
+  if (!fg) return err_code_np99;
   //   A=alpha*G
   auto A = _ecc->new_point();
   fg = _ecc->scalar_base_mul(alpha.get(), A.get());
-  if (!fg) return -4;
+  if (!fg) return err_code_np99;
   //   cereal 序列化
   //   np99_msg_AC ac;
   array<string, 2> ac;
   ac[0] = A->to_bin();
   ac[1] = C->to_bin();
-  if (ac[0].empty() || ac[1].empty()) return -5;
+  if (ac[0].empty() || ac[1].empty()) return err_code_np99;
   stringstream ss1;
-  cereal::BinaryOutputArchive bin_out_ar(ss1);
-  bin_out_ar(ac);
+  try {
+    cereal::BinaryOutputArchive bin_out_ar(ss1);
+    bin_out_ar(ac);
+  } catch (const std::exception& e) {
+    err_info = e.what();
+    return err_code_np99;
+  }
+
   //   send A C
   sock->send(ss1.str());
-  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "np99 sender send AC ok");
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "np99 sender send AC");
   //   receive pk_i0
   ss1.clear(), ss1.str("");
   vector<string> recv_pks_str;
   string pks_i0 = sock->recv();
+  if (pks_i0.empty()) {
+    SPDLOG_LOGGER_ERROR(spdlog::default_logger(),
+                        "np99 sender recv pk_i0 not ok");
+    return err_code_np99;
+  }
   ss1.str(pks_i0);
-  cereal::BinaryInputArchive bin_in_ar(ss1);
-  bin_in_ar(recv_pks_str);
-  if (ot_num != recv_pks_str.size()) return -6;
+  try {
+    cereal::BinaryInputArchive bin_in_ar(ss1);
+    bin_in_ar(recv_pks_str);
+  } catch (const cereal::Exception& e) {
+    err_info = e.what();
+    return err_code_np99;
+  }
+
+  if (ot_num != recv_pks_str.size()) return err_code_np99;
   //   vector<unique_ptr<point>> recv_pks_str(ot_num);
   //   使用A变量作为pk_i0,不用再创建新的变量了
   auto& pk_i0 = A;
   auto tmp_pk = _ecc->new_point();
+  if (!tmp_pk) return err_code_np99;
   char out_buf[32];
   for (size_t i = 0; i < ot_num; i++) {
     string tmp = recv_pks_str[i];
     // 使用
-    pk_i0->from_bin(tmp.data(), tmp.size());
+    if (pk_i0->from_bin(tmp.data(), tmp.size()) == 0) return err_code_np99;
     // alpha*pk_i0
     bool fg = _ecc->scalar_mul(alpha.get(), pk_i0.get(), tmp_pk.get());
-    if (!fg) return -10;
+    if (!fg) return err_code_np99;
     string bin = tmp_pk->to_bin();
+    if (bin.empty()) return err_code_np99;
     _hash->hasher_reset();
     _hash->hasher_update(bin.data(), bin.size());
     _hash->hasher_final(out_buf, 32);
     pair_keys[i][0] = *(oc::block*)out_buf;
     //
     fg = _ecc->inv(pk_i0.get());
-    if (!fg) return -7;
+    if (!fg) return err_code_np99;
     fg = _ecc->add(C.get(), pk_i0.get());  // C-pk_i0
-    if (!fg) return -8;
+    if (!fg) return err_code_np99;
     fg = _ecc->scalar_mul(alpha.get(), pk_i0.get());
-    if (!fg) return -9;
+    if (!fg) return err_code_np99;
     string bin2 = pk_i0->to_bin();
+    if (bin2.empty()) return err_code_np99;
     _hash->hasher_reset();
     _hash->hasher_update(bin2.data(), bin2.size());
     _hash->hasher_final(out_buf, 32);
     pair_keys[i][1] = *(oc::block*)out_buf;
   }
-
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "np99 sender end ...");
+  on_error_exit.dismiss();
   return 0;
 };
 /************* np99receiver **************/
@@ -162,58 +193,80 @@ np99receiver::~np99receiver() {
 };
 int np99receiver::receive(const oc::BitVector& choices,
                           std::vector<oc::block>& single_keys, conn* sock) {
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "np99 receiver start ...");
+  string err_info = "";
+  //   出现错误时退出，要处理的逻辑，关闭 sock
+  scope_guard on_error_exit([&]() {
+    sock->close();
+    SPDLOG_LOGGER_ERROR(spdlog::default_logger(),
+                        "np99 receiver error exit,err_info:{} ...", err_info);
+  });
+  if (!_ecc || !_hash || !sock) return err_code_np99;
   int ot_num = choices.size();
-  if (single_keys.size() < ot_num) return -1;
+  if (single_keys.size() < ot_num) return err_code_np99;
   //   recv A C
   string a_c_str = sock->recv();
+  if (a_c_str.empty()) return err_code_np99;
   array<string, 2> ac;
   stringstream ss(a_c_str);
   //   反序列化 A C
-  cereal::BinaryInputArchive bin_in_ar(ss);
-  bin_in_ar(ac);
-  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "np99 receiver recv AC ok");
+  try {
+    cereal::BinaryInputArchive bin_in_ar(ss);
+    bin_in_ar(ac);
+  } catch (const cereal::Exception& e) {
+    err_info = e.what();
+    return err_code_np99;
+  }
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "np99 receiver recv AC");
   auto C = _ecc->new_point();
   int fg = C->from_bin(ac[1].data(), ac[1].size());
-  if (!fg) return -2;
+  if (!fg) return err_code_np99;
   // A point
   auto A = _ecc->new_point();
   fg = A->from_bin(ac[0].data(), ac[0].size());
-  if (!fg) return -13;
+  if (!fg) return err_code_np99;
   //
   vector<string> pk_i0(ot_num);
   vector<string> k_i_A(ot_num);
   //   vector<unique_ptr<bigint>> sk_i(ot_num);
   auto sk_i = _ecc->new_bn();
   auto k_G = _ecc->new_point();
+  if (!sk_i || !k_G) return err_code_np99;
   for (size_t i = 0; i < ot_num; i++) {
     // ?? move()
     bool fg = _ecc->gen_rand_bn(sk_i.get());
-    if (!fg) return -10;
+    if (!fg) return err_code_np99;
     // int ch = choices[i];
     fg = _ecc->scalar_base_mul(sk_i.get(), k_G.get());
-    if (!fg) return -11;
+    if (!fg) return err_code_np99;
     if (choices[i]) {
       // C-kG
       fg = _ecc->inv(k_G.get());
-      if (!fg) return -3;
+      if (!fg) return err_code_np99;
       fg = _ecc->add(C.get(), k_G.get());
-      if (!fg) return -12;
+      if (!fg) return err_code_np99;
     } else {
       // kG
     }
     string tmp = k_G->to_bin();
-    if (tmp.empty()) return -4;
+    if (tmp.empty()) return err_code_np99;
     pk_i0[i] = tmp;
     // ki*A
     auto& k_A = k_G;
-    _ecc->scalar_mul(sk_i.get(), A.get(), k_A.get());
+    fg = _ecc->scalar_mul(sk_i.get(), A.get(), k_A.get());
+    if (!fg) return err_code_np99;
     string tmp2 = k_A->to_bin();
-    if (tmp2.empty()) return -14;
+    if (tmp2.empty()) return err_code_np99;
     k_i_A[i] = tmp2;
   }
   ss.clear(), ss.str("");
-  cereal::BinaryOutputArchive bin_out_ar(ss);
-  bin_out_ar(pk_i0);
+  try {
+    cereal::BinaryOutputArchive bin_out_ar(ss);
+    bin_out_ar(pk_i0);
+  } catch (const cereal::Exception& e) {
+    err_info = e.what();
+    return err_code_np99;
+  }
   //   send pk_i0
   sock->send(ss.str());
   // 生成解密密钥
@@ -229,6 +282,9 @@ int np99receiver::receive(const oc::BitVector& choices,
     _hash->hasher_final(out_buf, 32);
     single_keys[i] = *(oc::block*)out_buf;
   }
+  //   no error occur
+  on_error_exit.dismiss();
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "np99 receiver end ...");
   return 0;
 };
 

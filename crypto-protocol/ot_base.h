@@ -6,6 +6,7 @@
 #include "crypto-protocol/hasherimpl.h"
 
 namespace fucrypto {
+#define err_code_np99 1000
 class np99sender : public ot_sender {
  private:
   std::unique_ptr<curve> _ecc;
