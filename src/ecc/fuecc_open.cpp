@@ -190,8 +190,9 @@ open_curve::open_curve(string curve_name) : curve(curve_name) {
   //   BIGNUM* bn = BN_CTX_get(_bn_ctx);
   const EC_POINT* G_1 = EC_GROUP_get0_generator(_ec_group);
   const EC_POINT* G_2 = EC_GROUP_get0_generator(_ec_group);
-  SPDLOG_LOGGER_INFO(spdlog::default_logger(), ">>>{}: G_1:{},G_2:{}",
-                     _curve_name, (uint64_t)G_1, (uint64_t)G_2);
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     ">>_curve_name:{}: G_1:{},G_2:{}", _curve_name,
+                     (uint64_t)G_1, (uint64_t)G_2);
 };
 open_curve::~open_curve() {
   if (_ec_group) EC_GROUP_free(_ec_group);

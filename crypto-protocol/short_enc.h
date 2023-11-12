@@ -7,11 +7,13 @@ namespace fucrypto {
 class short_elgamal {
  private:
   //   curve* _c;
+  uint32_t _get_short_msg(const std::string& m_g);
 
  public:
   static std::unordered_map<uint64_t,
                             std::vector<std::pair<std::string, uint32_t>>>
       _cipher_map;
+  static std::vector<std::string> _cipher_list;
   static uint32_t _msg_n;
 
  public:
@@ -19,7 +21,7 @@ class short_elgamal {
 
   short_elgamal();
   ~short_elgamal();
-  int gen_key(point* pk, bigint* sk);
+  int gen_key(point* pk, bigint* sk, curve* c);
   //   int set_key();
   int enc_list(const std::vector<uint32_t>& plains,
                std::vector<std::array<std::string, 2>>& ciphers,
