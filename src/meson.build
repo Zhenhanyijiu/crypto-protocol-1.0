@@ -22,6 +22,7 @@ source_files = files(
   'ot/ot_iknp.cpp',  
   'ot/kkrt.cpp',
   'ot/ot_interface.cpp',
+  'pke/short_enc.cpp',
 )
 
 crypto_lib = library('crypto_protocol',
