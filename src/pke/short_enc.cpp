@@ -5,19 +5,23 @@
 using namespace std;
 namespace fucrypto {
 int short_elgamal::init_short_cipher(curve* c, uint32_t max_msg_n) {
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "init_short_cipher begin ...");
   string err_info = "";
-  scope_guard on_err_exit([&]() {});
+  scope_guard on_err_exit([&]() {
+    SPDLOG_LOGGER_ERROR(spdlog::default_logger(), "error_info:{}...", err_info);
+  });
   if (!c) return err_code_short_enc;
   _max_msg_n = max_msg_n;
   _cipher_list.resize(_max_msg_n);
   auto bn = c->new_bn();
-  auto g1 = c->new_point();
-  if (!bn || !g1) return err_code_short_enc;
+  auto m_g = c->new_point();
+  if (!bn || !m_g) return err_code_short_enc;
   for (size_t i = 0; i < _max_msg_n; i++) {
-    bn->from_dec(to_string(i));
-    bool fg = c->scalar_base_mul(bn.get(), g1.get());
-    if (!fg) return err_code_short_enc;
-    string cipher_bin = g1->to_bin();
+    int fg = 0;
+    fg = (bool)bn->from_dec(to_string(i));
+    fg += c->scalar_base_mul(bn.get(), m_g.get());
+    if (fg != 2) return err_code_short_enc;
+    string cipher_bin = m_g->to_bin();
     if (cipher_bin.empty()) return err_code_short_enc;
     _cipher_list[i] = cipher_bin;
     uint64_t key = 0;
@@ -25,10 +29,9 @@ int short_elgamal::init_short_cipher(curve* c, uint32_t max_msg_n) {
       key = *(uint64_t*)cipher_bin.data();
     else
       memcpy(&key, cipher_bin.data(), cipher_bin.size());
-
     _cipher_map[key].push_back(make_pair(cipher_bin, i));
     // _cipher_map[];
-    cout << "i:" << i << "," << g1->to_hex() << ",key:" << key
+    cout << "i:" << i << "," << m_g->to_hex() << ",key:" << key
          << ",bin.size:" << cipher_bin.size() << endl;
   }
   for (auto it = _cipher_map.begin(); it != _cipher_map.end(); it++) {

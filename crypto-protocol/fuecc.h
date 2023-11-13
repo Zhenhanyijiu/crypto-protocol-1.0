@@ -15,9 +15,9 @@ class bigint {
   virtual std::string to_bin() = 0;
   virtual std::string to_hex() = 0;
   virtual std::string to_dec() = 0;
-  virtual int from_bin(const char* bin, int len) = 0;
-  virtual int from_hex(std::string hex) = 0;
-  virtual int from_dec(std::string dec) = 0;
+  virtual bool from_bin(const char* bin, int len) = 0;
+  virtual bool from_hex(std::string hex) = 0;
+  virtual bool from_dec(std::string dec) = 0;
   virtual int cmp(const bigint* a, const bigint* b) = 0;
   virtual void print() = 0;
 
@@ -31,9 +31,9 @@ class point {
   virtual std::string to_bin() = 0;
   virtual std::string to_hex() = 0;
   virtual std::unique_ptr<bigint> to_bn() = 0;
-  virtual int from_bin(const char* bin, int len) = 0;
-  virtual int from_hex(const char* hex) = 0;
-  virtual int from_bn(const bigint* bn) = 0;
+  virtual bool from_bin(const char* bin, int len) = 0;
+  virtual bool from_hex(const char* hex) = 0;
+  virtual bool from_bn(const bigint* bn) = 0;
   virtual void print() = 0;
   //   virtual bool add(const point* p1, const point* p2, point* res, void* ctx)
   //   = 0; virtual bool add(const point* p1, point* p2, void* ctx) = 0; virtual

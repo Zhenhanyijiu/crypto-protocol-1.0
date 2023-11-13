@@ -71,7 +71,7 @@ std::string open_bn::to_dec() {
   OPENSSL_free(s);
   return ret;
 }
-int open_bn::from_bin(const char* bin, int len) {
+bool open_bn::from_bin(const char* bin, int len) {
   printf("===1 n_ptr:%p\n", _n);
   auto res = BN_bin2bn((unsigned char*)bin, len, ptr(_n));
   if (!res) return 0;
@@ -79,10 +79,10 @@ int open_bn::from_bin(const char* bin, int len) {
   printf("===2 res:%p,_n:%p\n", res, ptr(_n));
   return 1;
 }
-int open_bn::from_hex(std::string hex) {
+bool open_bn::from_hex(std::string hex) {
   return BN_hex2bn((BIGNUM**)&_n, hex.c_str());
 }
-int open_bn::from_dec(std::string dec) {
+bool open_bn::from_dec(std::string dec) {
   return BN_dec2bn((BIGNUM**)&_n, dec.c_str());
 }
 int open_bn::cmp(const bigint* a, const bigint* b) {
@@ -142,12 +142,12 @@ std::unique_ptr<bigint> open_point::to_bn() {
   if (res) return ret;
   return nullptr;
 }
-int open_point::from_bin(const char* bin, int len) {
+bool open_point::from_bin(const char* bin, int len) {
   int ret = EC_POINT_oct2point(_open_c->_ec_group, _p, (unsigned char*)bin, len,
                                _open_c->_bn_ctx);
   return ret;
 };
-int open_point::from_hex(const char* hex) {
+bool open_point::from_hex(const char* hex) {
   printf("===1 point _p:%p\n", _p);
   EC_POINT* res =
       EC_POINT_hex2point(_open_c->_ec_group, hex, _p, _open_c->_bn_ctx);
@@ -156,7 +156,7 @@ int open_point::from_hex(const char* hex) {
   if (!_p) _p = res;
   return 1;
 }
-int open_point::from_bn(const bigint* bn) {
+bool open_point::from_bn(const bigint* bn) {
   EC_POINT* res =
       EC_POINT_bn2point(_open_c->_ec_group, ptr(bn->_n), _p, _open_c->_bn_ctx);
   if (!res) return 0;

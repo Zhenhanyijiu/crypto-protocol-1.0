@@ -22,9 +22,9 @@ class open_bn : public bigint {
   std::string to_bin();
   std::string to_hex();
   std::string to_dec();
-  int from_bin(const char* bin, int len);
-  int from_hex(std::string hex);
-  int from_dec(std::string dec);
+  bool from_bin(const char* bin, int len) override;
+  bool from_hex(std::string hex) override;
+  bool from_dec(std::string dec) override;
   int cmp(const bigint* a, const bigint* b);
   void print();
 };
@@ -42,9 +42,9 @@ class open_point : public point {
   std::string to_bin();
   std::string to_hex();
   std::unique_ptr<bigint> to_bn();
-  int from_bin(const char* bin, int len);
-  int from_hex(const char* hex);
-  int from_bn(const bigint* bn);
+  bool from_bin(const char* bin, int len);
+  bool from_hex(const char* hex);
+  bool from_bn(const bigint* bn);
   void print();
   //   bool add(const point* p1, const point* p2, point* res, void* ctx);
   //   bool add(const point* p1, point* p2, void* ctx);
