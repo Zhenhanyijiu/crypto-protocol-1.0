@@ -4,16 +4,16 @@
 #include <bits/stdc++.h>
 using namespace std;
 namespace fucrypto {
-int short_elgamal::init_short_cipher(curve* c, uint32_t msg_n) {
+int short_elgamal::init_short_cipher(curve* c, uint32_t max_msg_n) {
   string err_info = "";
   scope_guard on_err_exit([&]() {});
   if (!c) return err_code_short_enc;
-  _msg_n = msg_n;
-  _cipher_list.resize(msg_n);
+  _max_msg_n = max_msg_n;
+  _cipher_list.resize(_max_msg_n);
   auto bn = c->new_bn();
   auto g1 = c->new_point();
   if (!bn || !g1) return err_code_short_enc;
-  for (size_t i = 0; i < _msg_n; i++) {
+  for (size_t i = 0; i < _max_msg_n; i++) {
     bn->from_dec(to_string(i));
     bool fg = c->scalar_base_mul(bn.get(), g1.get());
     if (!fg) return err_code_short_enc;
@@ -38,41 +38,42 @@ int short_elgamal::init_short_cipher(curve* c, uint32_t msg_n) {
   return 0;
 };
 //
-uint32_t short_elgamal::_get_short_msg(const std::string& m_g) {
-  if (m_g.empty()) return -1;
+uint32_t short_elgamal::_mg_to_short_msg(const std::string& mG_to_m) {
+  if (mG_to_m.empty()) return err_code_short_enc;
   uint64_t key = 0;
-  if (m_g.size() >= 8)
-    key = *(uint64_t*)m_g.data();
+  if (mG_to_m.size() >= 8)
+    key = *(uint64_t*)mG_to_m.data();
   else
-    memcpy(&key, m_g.data(), m_g.size());
+    memcpy(&key, mG_to_m.data(), mG_to_m.size());
   auto res = _cipher_map[key];
   int res_n = res.size();
-  if (res_n == 0) return -1;
+  if (res_n == 0) return err_code_short_enc;
   if (res_n == 1) {
-    if (m_g == res[0].first)
+    if (mG_to_m == res[0].first)
       return res[0].second;
     else
-      return -1;
+      return err_code_short_enc;
   }
   for (size_t i = 0; i < res.size(); i++)
-    if (m_g == res[i].first) return res[i].second;
-  return -1;
+    if (mG_to_m == res[i].first) return res[i].second;
+  return err_code_short_enc;
 }
 //
 std::unordered_map<uint64_t, std::vector<std::pair<std::string, uint32_t>>>
     short_elgamal::_cipher_map = {};
-uint32_t short_elgamal::_msg_n = 256;
+uint32_t short_elgamal::_max_msg_n = 256;
 std::vector<std::string> short_elgamal::_cipher_list = {};
 
 short_elgamal::short_elgamal(){};
 short_elgamal::~short_elgamal() { cout << ">> ~short_elgamal free" << endl; };
 // enc
-int short_elgamal::enc_list(const std::vector<uint32_t>& plains,
-                            std::vector<std::array<std::string, 2>>& ciphers,
-                            const point* pk, curve* c) {
+int short_elgamal::enc_list_fast(const std::vector<uint32_t>& plains,
+                                 std::string& cipher_0,
+                                 std::vector<std::string>& ciphers_1,
+                                 const point* pk, curve* c) {
   if (!pk || !c) return err_code_short_enc;
   int plains_num = plains.size();
-  ciphers.resize(plains_num);
+  ciphers_1.resize(plains_num);
   //   随机值 t
   auto t = c->gen_rand_bn();
   //   t->from_dec("1000");
@@ -82,57 +83,70 @@ int short_elgamal::enc_list(const std::vector<uint32_t>& plains,
   auto t_y = c->new_point();
   auto m_g = c->new_point();
   if (!t || !m || !c0 || !t_y || !m_g) return err_code_short_enc;
-  bool fg;
+  int fg = 0;
   // c0=tG
   fg = c->scalar_base_mul(t.get(), c0.get());
-  if (!fg) return err_code_short_enc;
   // tY
-  fg = c->scalar_mul(t.get(), pk, t_y.get());
-  if (!fg) return err_code_short_enc;
-  //
+  fg += c->scalar_mul(t.get(), pk, t_y.get());
+  cipher_0 = c0->to_bin();
+  if (fg != 2 || cipher_0.empty()) return err_code_short_enc;
+
   for (size_t i = 0; i < plains_num; i++) {
-    ciphers[i][0] = c0->to_bin();
     // c1=tY+mG
     // m->from_dec(to_string(i));                    // m
     // fg = c->scalar_base_mul(m.get(), m_g.get());  // mG
     // if (!fg) return err_code_short_enc;
-    string bin = _cipher_list[i];
-    m_g->from_bin(bin.data(), bin.size());
-    c->add(t_y.get(), m_g.get());
-    ciphers[i][1] = m_g->to_bin();
+    if (plains[i] < _max_msg_n) {
+      string bin = _cipher_list[plains[i]];
+      m_g->from_bin(bin.data(), bin.size());
+      c->add(t_y.get(), m_g.get());
+      ciphers_1[i] = m_g->to_bin();
+    } else {
+      return err_code_short_enc;
+    }
   }
   return 0;
 }
-int short_elgamal::dec_list(const vector<array<string, 2>>& ciphers,
-                            vector<uint32_t>& plains, const bigint* sk,
-                            curve* c) {
+int short_elgamal::dec_list_fast(const std::string& cipher_0,
+                                 const std::vector<std::string>& ciphers_1,
+                                 vector<uint32_t>& plains, const bigint* sk,
+                                 curve* c) {
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "start dec_list_fast ...");
+
   string error_info = "";
   scope_guard on_err_exit([&]() {
     SPDLOG_LOGGER_ERROR(spdlog::default_logger(), "error_info:{}...",
                         error_info);
   });
   if (!sk || !c) return err_code_short_enc;
-  int num = ciphers.size();
+  int num = ciphers_1.size();
   plains.resize(num);
   memset(plains.data(), -1, plains.size() * sizeof(uint32_t));
   auto c0 = c->new_point();
   auto c1 = c->new_point();
+  //   auto tmp = c->new_point();
+  //   auto sk_c0_inv = c->new_point();
+  auto& sk_c0_inv = c0;
   if (!c0 || !c1) return err_code_short_enc;
-  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "start dec ...");
+  int fg = 0;
+  fg = (bool)c0->from_bin(cipher_0.data(), cipher_0.size());  // C0
+  fg += c->scalar_mul(sk, sk_c0_inv.get());                   // sk*C0
+  fg += c->inv(sk_c0_inv.get());                              //-sk*C0
+  if (fg != 3) {
+    error_info = "compute -sk*C0 error";
+    return err_code_short_enc;
+  }
   //   mG=C1-sk*C0
   for (size_t i = 0; i < num; i++) {
     int fg = 0;
-    fg = (bool)c0->from_bin(ciphers[i][0].data(), ciphers[i][0].size());
-    fg += (bool)c1->from_bin(ciphers[i][1].data(), ciphers[i][1].size());
-    fg += c->scalar_mul(sk, c0.get());  // sk*C0
-    fg += c->inv(c0.get());             //-sk*C0
-    fg += c->add(c1.get(), c0.get());   // c0==mG
-    if (fg != 5) {
+    fg = (bool)c1->from_bin(ciphers_1[i].data(), ciphers_1[i].size());
+    fg += c->add(sk_c0_inv.get(), c1.get());  // C1-sk*C0
+    if (fg != 2) {
       error_info = "mG=C1-sk*C0 error i:" + to_string(i);
       return err_code_short_enc;
     }
-    string m_g = c0->to_bin();
-    plains[i] = _get_short_msg(m_g);
+    string m_g = c1->to_bin();
+    plains[i] = _mg_to_short_msg(m_g);
   }
   on_err_exit.dismiss();
   return 0;
