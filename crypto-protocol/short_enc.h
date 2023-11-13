@@ -29,6 +29,9 @@ class short_elgamal {
   int dec_list_fast(const std::string& cipher_0,
                     const std::vector<std::string>& ciphers_1,
                     std::vector<uint32_t>& plains, const bigint* sk, curve* c);
+  int enc_list_cipher_add(const std::vector<std::string>& cipher_0,
+                          std::vector<std::string>* ciphers_1, const point* pk,
+                          curve* c);
   //   int enc_list_fast(const std::vector<uint32_t>& plains,
   //                     std::vector<std::array<std::string, 2>>& ciphers,
   //                     const point* pk, curve* c);

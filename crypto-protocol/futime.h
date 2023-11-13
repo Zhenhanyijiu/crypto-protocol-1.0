@@ -67,5 +67,24 @@ float get_use_time(uint64_t ns, TimeBase b) {
   }
   return ret;
 }
+class time_point {
+ private:
+  std::chrono::steady_clock::time_point _n0;
+
+ public:
+  time_point() { _n0 = std::chrono::steady_clock::now(); };
+  ~time_point(){};
+  uint64_t get_time_piont_ms() {
+    std::chrono::steady_clock::time_point n1 = std::chrono::steady_clock::now();
+    auto dur = std::chrono::duration_cast<std::chrono::nanoseconds>(n1 - _n0);
+    return ((uint64_t)dur.count()) / 1e6;
+  };
+  double get_time_piont_s() {
+    std::chrono::steady_clock::time_point n1 = std::chrono::steady_clock::now();
+    auto dur = std::chrono::duration_cast<std::chrono::nanoseconds>(n1 - _n0);
+    return ((uint64_t)dur.count()) / 1e9 / 1.0;
+  };
+};
+
 // }  // namespace utils
 #endif

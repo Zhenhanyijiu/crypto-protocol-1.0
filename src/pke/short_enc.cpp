@@ -200,7 +200,38 @@ int short_elgamal::dec_list_fast(const std::string& cipher_0,
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "start dec_list_fast end ...");
   return 0;
 }
+/// @brief
+/// @param cipher_0
+/// @param ciphers_1
+/// @param pk
+/// @param c
+/// @return
+int short_elgamal::enc_list_cipher_add(const std::vector<std::string>& cipher_0,
+                                       std::vector<std::string>* ciphers_1,
+                                       const point* pk, curve* c) {
+  //   密文向量个数
+  int cipher_vector_num = cipher_0.size();
+  if (cipher_vector_num <= 1) return 0;
+  int vector_size = ciphers_1[0].size();
+  //   check vector_size
+  for (size_t i = 1; i < cipher_vector_num; i++) {
+    if (vector_size != ciphers_1[i].size()) return err_code_short_enc;
+  }
+  //
+  auto p0 = c->new_point();
+  auto p1 = c->new_point();
+  for (size_t i = 0; i < vector_size; i++) {
+    string& tmp = ciphers_1[0][i];
+    p0->from_bin(tmp.data(), tmp.size());
+    for (size_t j = 1; j < cipher_vector_num; j++) {
+      p1->from_bin(ciphers_1[j][i].data(), ciphers_1[j][i].size());
+      c->add(p1.get(), p0.get());
+    }
+    tmp = p0->to_bin();
+  }
 
+  return 0;
+}
 //
 int short_elgamal::gen_key(point* pk, bigint* sk, curve* c) {
   //   c->new_bn();
