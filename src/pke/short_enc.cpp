@@ -206,7 +206,7 @@ int short_elgamal::dec_list_fast(const std::string& cipher_0,
 /// @param pk
 /// @param c
 /// @return
-int short_elgamal::enc_list_cipher_add(const std::vector<std::string>& cipher_0,
+int short_elgamal::enc_list_cipher_add(std::vector<std::string>& cipher_0,
                                        std::vector<std::string>* ciphers_1,
                                        const point* pk, curve* c) {
   //   密文向量个数
@@ -220,6 +220,15 @@ int short_elgamal::enc_list_cipher_add(const std::vector<std::string>& cipher_0,
   //
   auto p0 = c->new_point();
   auto p1 = c->new_point();
+  // c0 相加
+  string tmp = cipher_0[0];
+  p0->from_bin(tmp.data(), tmp.size());
+  for (size_t j = 1; j < cipher_vector_num; j++) {
+    p1->from_bin(cipher_0[j].data(), cipher_0[j].size());
+    c->add(p1.get(), p0.get());
+  }
+  cipher_0[0] = p0->to_bin();  // 将 c0 的和存在cipher_0[0]
+  // c1相加
   for (size_t i = 0; i < vector_size; i++) {
     string& tmp = ciphers_1[0][i];
     p0->from_bin(tmp.data(), tmp.size());

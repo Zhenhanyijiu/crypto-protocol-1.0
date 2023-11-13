@@ -2,16 +2,29 @@
 #include "crypto-protocol/fulog.h"
 #include "crypto-protocol/futime.h"
 using namespace fucrypto;
-int main_test(int argc, char** argv) {
+
+struct argv_param {
+  int max_msg_n = 256;
+  int plain_num = 100;
+  int plain_cipher_vector_num = 3;
+};
+argv_param get_argv_param(int argc, char** argv) {
+  argv_param param;
+  if (argc > 1) param.max_msg_n = atoi(argv[1]);
+  if (argc > 2) param.plain_num = atoi(argv[2]);
+  if (argc > 3) param.plain_cipher_vector_num = atoi(argv[3]);
+  SPDLOG_LOGGER_INFO(
+      spdlog::default_logger(),
+      "最大消息 max_msg_n:{},明文个数:{},plain_cipher_vector_num:{}",
+      param.max_msg_n, param.plain_num, param.plain_cipher_vector_num);
+  return param;
+}
+int main_test(argv_param& param) {
   spdlog_set_level("info");
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "====== test short elgamal enc ======");
-  int max_msg_n = 256;
-  int plain_num = 100;
-  if (argc > 1) max_msg_n = atoi(argv[1]);
-  if (argc > 2) plain_num = atoi(argv[2]);
-  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
-                     "最大消息 max_msg_n:{},明文个数:{}", max_msg_n, plain_num);
+  int max_msg_n = param.max_msg_n;
+  int plain_num = param.plain_num;
   auto c = (*ecc_lib_map)["openssl"]->new_curve("secp256k1");
   if (!c) return 0;
   time_point tm_point;
@@ -89,7 +102,90 @@ int main_test(int argc, char** argv) {
   return 0;
 }
 
+int main_test_enc_list_cipher_add(argv_param& param) {
+  srand(time(NULL));
+  spdlog_set_level("info");
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "====== test short elgamal enc ======");
+  int max_msg_n = param.max_msg_n;
+  int plain_num = param.plain_num;
+  int plain_cipher_vector_num = param.plain_cipher_vector_num;
+  auto c = (*ecc_lib_map)["openssl"]->new_curve("secp256k1");
+  if (!c) return 0;
+  time_point tm_point;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "=== init_short_cipher begin time:{} ms",
+                     tm_point.get_time_piont_ms());
+  short_elgamal::init_short_cipher(c.get(), max_msg_n);
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "=== init_short_cipher end time:{} ms",
+                     tm_point.get_time_piont_ms());
+  // pk, ks
+  auto pk = c->new_point();
+  auto sk = c->gen_rand_bn();
+  c->scalar_base_mul(sk.get(), pk.get());
+  //
+  short_elgamal sh_elg;
+  vector<vector<uint32_t>> plain_vector(plain_cipher_vector_num);
+  vector<string> cipher0_vector(plain_cipher_vector_num);
+  vector<vector<string>> cipher1_vector(plain_cipher_vector_num);
+  for (size_t i = 0; i < plain_cipher_vector_num; i++) {
+    plain_vector[i].resize(plain_num);
+    for (size_t i2 = 0; i2 < plain_num; i2++) {
+      plain_vector[i][i2] = rand() % 2;
+    }
+
+    cipher1_vector[i].resize(plain_num);
+    sh_elg.enc_list_fast(plain_vector[i], cipher0_vector[i], cipher1_vector[i],
+                         pk.get(), c.get());
+  }
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "====== enc_list_fast end");
+
+  // 密文相加
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "====== enc_list_cipher_add start:{}ms",
+                     tm_point.get_time_piont_ms());
+  sh_elg.enc_list_cipher_add(cipher0_vector, cipher1_vector.data(), pk.get(),
+                             c.get());
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "====== enc_list_cipher_add end:{}ms",
+                     tm_point.get_time_piont_ms());
+
+  // 解密相加的结果
+  vector<uint32_t> plain_dec;
+  sh_elg.dec_list_fast(cipher0_vector[0], cipher1_vector[0], plain_dec,
+                       sk.get(), c.get());
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "====== dec_list_fast end");
+  // check
+  for (size_t i = 0; i < plain_num; i++) {
+    int sum = 0;
+    for (size_t i2 = 0; i2 < plain_cipher_vector_num; i2++) {
+      sum += plain_vector[i2][i];
+    }
+    if (i < 10 && i < plain_num) {
+      //   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+      //                      "====== plain_vector add end");
+      //   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "======
+      //   plain_dec.size:{}",
+      //                      plain_dec.size());
+      SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                         "====== sum:{},plain_dec[i]:{},i:{}", sum,
+                         plain_dec[i], i);
+    }
+    // string tmp=cipher1_vector[0][i];
+
+    if (sum != plain_dec[i]) {
+      SPDLOG_LOGGER_ERROR(spdlog::default_logger(), "====== check error i:{}",
+                          i);
+      return 0;
+    }
+  }
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "====== check ok");
+  return 0;
+}
 int main(int argc, char** argv) {
-  main_test(argc, argv);
+  argv_param param = get_argv_param(argc, argv);
+  //   main_test(param);
+  main_test_enc_list_cipher_add(param);
   return 0;
 }
