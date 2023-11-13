@@ -4,11 +4,14 @@
 using namespace fucrypto;
 int main_test(int argc, char** argv) {
   spdlog_set_level("info");
-  cout << "====== test short elgamal enc ======\n";
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "====== test short elgamal enc ======");
   int max_msg_n = 256;
   int plain_num = 100;
   if (argc > 1) max_msg_n = atoi(argv[1]);
   if (argc > 2) plain_num = atoi(argv[2]);
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "最大消息 max_msg_n:{},明文个数:{}", max_msg_n, plain_num);
   auto c = (*ecc_lib_map)["openssl"]->new_curve("secp256k1");
   if (!c) return 0;
   short_elgamal::init_short_cipher(c.get(), max_msg_n);
@@ -30,40 +33,43 @@ int main_test(int argc, char** argv) {
   uint64_t start1 = get_time_now<uint64_t>();
   int fg = sh_elg.enc_list_fast(plain, cipher_0, ciphers, pk.get(), c.get());
   if (fg) {
-    cout << "enc_list error ";
+    SPDLOG_LOGGER_ERROR(spdlog::default_logger(), "enc_list_fast error");
     return 0;
   }
-  for (size_t i = 0; i < ciphers.size(); i++) {
-    cout << "cipher_i:" << i << ",c0:" << cipher_0.size()
-         << ",c1:" << ciphers[i].size() << endl;
+  for (size_t i = 0; i < 5 && i < ciphers.size(); i++) {
+    // cout << "cipher_i:" << i << ",c0:" << cipher_0.size()
+    //      << ",c1:" << ciphers[i].size() << endl;
+    SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                       "cipher_i:{},c0_size:{},c1_size:{}", i, cipher_0.size(),
+                       ciphers[i].size());
   }
   auto use_t = get_use_time<uint64_t>(start1, MS);
-  cout << "enc_list time:" << use_t << " ms" << endl;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "enc_list time:{} ms", use_t);
   //
   vector<uint32_t> plain_dec;
   fg = sh_elg.dec_list_fast(cipher_0, ciphers, plain_dec, sk.get(), c.get());
   if (fg) {
-    cout << "dec_list error ";
+    SPDLOG_LOGGER_ERROR(spdlog::default_logger(), "dec_list error");
     return 0;
   }
   //   check
   if (plain.size() != plain_dec.size()) {
-    cout << "check error " << endl;
+    SPDLOG_LOGGER_ERROR(spdlog::default_logger(), "check error");
     return 0;
   }
   auto use_t2 = get_use_time<uint64_t>(start1, MS);
-  cout << "dec_list time:" << use_t2 << " ms" << endl;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "dec_list time:{} ms", use_t2);
   for (int i = 0; i < plain.size(); i++) {
     // cout << "dec i:" << i << ",plain_dec[i]:" << plain_dec[i]
     //      << ",plain[i]:" << plain[i] << endl;
     if (plain[i] != plain_dec[i]) {
-      cout << "check val error i:" << i << endl;
+      SPDLOG_LOGGER_ERROR(spdlog::default_logger(), "check val error i::{}", i);
       return 0;
     }
   }
-  cout << "check ok " << endl;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "check ok");
   auto use_t3 = get_use_time<uint64_t>(start1, MS);
-  cout << "check time:" << use_t3 << " ms" << endl;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "check time:{}", use_t3);
   return 0;
 }
 
