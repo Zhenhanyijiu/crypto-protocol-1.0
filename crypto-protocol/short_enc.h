@@ -21,6 +21,30 @@ class short_elgamal {
 
   short_elgamal();
   ~short_elgamal();
+
+  int enc_batch(const std::vector<uint32_t>& plains,
+                std::vector<std::array<std::string, 2>>& ciphers,
+                const point* pk, curve* c);
+  int dec_batch(const std::vector<std::array<std::string, 2>>& ciphers,
+                std::vector<uint32_t>& plains, const bigint* sk, curve* c);
+  int enc_batch_by_map(const std::vector<uint32_t>& plains,
+                       std::vector<std::array<std::string, 2>>& ciphers,
+                       const point* pk, curve* c);
+  int dec_batch_by_map(const std::vector<std::array<std::string, 2>>& ciphers,
+                       std::vector<uint32_t>& plains, const bigint* sk,
+                       curve* c);
+  // c0 预计算放到 ciphers[i][0]
+  int enc_batch_pre_c0(const std::vector<uint32_t>& plains,
+                       const std::vector<std::string>& t_list,
+                       std::vector<std::array<std::string, 2>>& ciphers,
+                       const point* pk, curve* c);
+  int dec_batch_pre_c0(const std::vector<std::array<std::string, 2>>& ciphers,
+                       std::vector<uint32_t>& plains, const bigint* sk,
+                       curve* c);
+  int batch_cipher_add(
+      std::vector<std::vector<std::array<std::string, 2>>>& ciphers,
+      const point* pk, curve* c);
+  //
   int gen_key(point* pk, bigint* sk, curve* c);
   //   int set_key();
   int enc_list_fast(const std::vector<uint32_t>& plains, std::string& cipher_0,
@@ -32,12 +56,6 @@ class short_elgamal {
   int enc_list_cipher_add(std::vector<std::string>& cipher_0,
                           std::vector<std::string>* ciphers_1, const point* pk,
                           curve* c);
-  //   int enc_list_fast(const std::vector<uint32_t>& plains,
-  //                     std::vector<std::array<std::string, 2>>& ciphers,
-  //                     const point* pk, curve* c);
-  //   int dec_list_fast(const std::vector<std::array<std::string, 2>>& ciphers,
-  //                     std::vector<uint32_t>& plains, const bigint* sk, curve*
-  //                     c);
 };
 }  // namespace fucrypto
 #endif

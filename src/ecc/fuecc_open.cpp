@@ -72,11 +72,11 @@ std::string open_bn::to_dec() {
   return ret;
 }
 bool open_bn::from_bin(const char* bin, int len) {
-  printf("===1 n_ptr:%p\n", _n);
+  //   printf("===1 n_ptr:%p\n", _n);
   auto res = BN_bin2bn((unsigned char*)bin, len, ptr(_n));
   if (!res) return 0;
   if (!_n) _n = res;
-  printf("===2 res:%p,_n:%p\n", res, ptr(_n));
+  //   printf("===2 res:%p,_n:%p\n", res, ptr(_n));
   return 1;
 }
 bool open_bn::from_hex(std::string hex) {

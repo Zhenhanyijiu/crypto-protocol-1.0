@@ -88,6 +88,228 @@ std::vector<std::string> short_elgamal::_cipher_list = {};
 
 short_elgamal::short_elgamal(){};
 short_elgamal::~short_elgamal() { cout << "~short_elgamal free" << endl; };
+
+/// @brief
+/// @param plains
+/// @param ciphers
+/// @param pk
+/// @param c
+/// @return
+int short_elgamal::enc_batch(const vector<uint32_t>& plains,
+                             vector<array<string, 2>>& ciphers, const point* pk,
+                             curve* c) {
+  if (!pk || !c) return err_code_short_enc;
+  int plains_num = plains.size();
+  ciphers.resize(plains_num);
+  //   随机值 t
+  auto t = c->gen_rand_bn();
+  auto c0 = c->new_point();
+  auto m_g = c->new_point();
+  if (!t || !c0 || !m_g) return err_code_short_enc;
+  //
+  for (size_t i = 0; i < plains_num; i++) {
+    int fg = 0;
+    // 随机 t
+    fg = c->gen_rand_bn(t.get());
+    // tG
+    fg += c->scalar_base_mul(t.get(), c0.get());
+    if (fg != 2) return err_code_short_enc;
+    if ((ciphers[i][0] = c0->to_bin()).empty()) return err_code_short_enc;
+    // tY
+    auto& t_y = c0;
+    fg = c->scalar_mul(t.get(), pk, t_y.get());
+    if (!fg) return err_code_short_enc;
+    // c1=tY+mG
+    t->from_dec(to_string(plains[i]));            // m
+    fg = c->scalar_base_mul(t.get(), m_g.get());  // mG
+    // if (!fg) return err_code_short_enc;
+    // string bin = _cipher_list[i];
+    // m_g->from_bin(bin.data(), bin.size());
+    c->add(m_g.get(), t_y.get());
+    ciphers[i][1] = t_y->to_bin();
+  }
+  return 0;
+}
+/// @brief
+/// @param ciphers
+/// @param plains
+/// @param sk
+/// @param c
+/// @return
+int short_elgamal::dec_batch(const vector<array<string, 2>>& ciphers,
+                             vector<uint32_t>& plains, const bigint* sk,
+                             curve* c) {
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "start dec_batch ...");
+  string error_info = "";
+  scope_guard on_err_exit([&]() {
+    SPDLOG_LOGGER_ERROR(spdlog::default_logger(), "error_info:{}...",
+                        error_info);
+  });
+  if (!sk || !c) return err_code_short_enc;
+  int num = ciphers.size();
+  plains.resize(num);
+  memset(plains.data(), -1, plains.size() * sizeof(uint32_t));
+  auto c0 = c->new_point();
+  auto c1 = c->new_point();
+  if (!c0 || !c1) return err_code_short_enc;
+  //   mG=C1-sk*C0
+  for (size_t i = 0; i < num; i++) {
+    int fg = 0;
+    fg = c0->from_bin(ciphers[i][0].data(), ciphers[i][0].size());
+    fg += c1->from_bin(ciphers[i][1].data(), ciphers[i][1].size());
+    fg += c->scalar_mul(sk, c0.get());  // sk*C0
+    fg += c->inv(c0.get());             //-sk*C0
+    fg += c->add(c1.get(), c0.get());   // c0==mG
+    if (fg != 5) {
+      error_info = "mG=C1-sk*C0 error i:" + to_string(i);
+      return err_code_short_enc;
+    }
+    string m_g = c0->to_bin();
+    plains[i] = _mg_to_short_msg(m_g);
+  }
+  on_err_exit.dismiss();
+  return 0;
+}
+/// @brief
+/// @param plains
+/// @param ciphers
+/// @param pk
+/// @param c
+/// @return
+int short_elgamal::enc_batch_by_map(const vector<uint32_t>& plains,
+                                    vector<array<string, 2>>& ciphers,
+                                    const point* pk, curve* c) {
+  if (!pk || !c) return err_code_short_enc;
+  int plains_num = plains.size();
+  ciphers.resize(plains_num);
+  //   随机值 t
+  auto t = c->gen_rand_bn();
+  auto c0 = c->new_point();
+  auto m_g = c->new_point();
+  if (!t || !c0 || !m_g) return err_code_short_enc;
+  //
+  for (size_t i = 0; i < plains_num; i++) {
+    int fg = 0;
+    // 随机 t
+    fg = c->gen_rand_bn(t.get());
+    // tG
+    fg += c->scalar_base_mul(t.get(), c0.get());
+    if (fg != 2) return err_code_short_enc;
+    if ((ciphers[i][0] = c0->to_bin()).empty()) return err_code_short_enc;
+    // tY
+    auto& t_y = c0;
+    fg = c->scalar_mul(t.get(), pk, t_y.get());
+    if (!fg) return err_code_short_enc;
+    // c1=tY+mG
+    // t->from_dec(to_string(plains[i]));            // m
+    // fg = c->scalar_base_mul(t.get(), m_g.get());  // mG
+    // if (!fg) return err_code_short_enc;
+    string bin = _cipher_list[plains[i]];
+    m_g->from_bin(bin.data(), bin.size());
+    c->add(m_g.get(), t_y.get());
+    ciphers[i][1] = t_y->to_bin();
+  }
+  return 0;
+}
+
+/// @brief
+/// @param plains
+/// @param t
+/// @param tG
+/// @param ciphers
+/// @param pk
+/// @param c
+/// @return
+int short_elgamal::enc_batch_pre_c0(const vector<uint32_t>& plains,
+                                    const vector<string>& t_list,
+                                    vector<array<string, 2>>& ciphers,
+                                    const point* pk, curve* c) {
+  if (!pk || !c) return err_code_short_enc;
+  int plains_num = plains.size();
+  ciphers.resize(plains_num);
+  //   随机值 t
+  auto t = c->gen_rand_bn();
+  auto c0 = c->new_point();
+  auto m_g = c->new_point();
+  if (!t || !c0 || !m_g) return err_code_short_enc;
+  //
+  for (size_t i = 0; i < plains_num; i++) {
+    int fg = 0;
+    // 随机 t
+    fg = t->from_bin(t_list[i].data(), t_list[i].size());
+    // tG
+    // fg += c0->from_bin(ciphers[i][0].data(), ciphers[i][0].size());
+    if (!fg) return err_code_short_enc;
+    // if ((ciphers[i][0] = c0->to_bin()).empty()) return err_code_short_enc;
+    // tY
+    auto& t_y = c0;
+    fg = c->scalar_mul(t.get(), pk, t_y.get());
+    if (!fg) return err_code_short_enc;
+    // c1=tY+mG
+    string bin = _cipher_list[plains[i]];
+    m_g->from_bin(bin.data(), bin.size());  // mG
+    c->add(m_g.get(), t_y.get());
+    ciphers[i][1] = t_y->to_bin();
+  }
+  return 0;
+}
+
+/// @brief
+/// @param ciphers
+/// @param plains
+/// @param sk
+/// @param c
+/// @return
+int short_elgamal::dec_batch_by_map(const vector<array<string, 2>>& ciphers,
+                                    vector<uint32_t>& plains, const bigint* sk,
+                                    curve* c) {
+  return dec_batch(ciphers, plains, sk, c);
+}
+/// @brief
+/// @param ciphers
+/// @param plains
+/// @param sk
+/// @param c
+/// @return
+int short_elgamal::dec_batch_pre_c0(const vector<array<string, 2>>& ciphers,
+                                    vector<uint32_t>& plains, const bigint* sk,
+                                    curve* c) {
+  return dec_batch(ciphers, plains, sk, c);
+}
+
+int short_elgamal::batch_cipher_add(vector<vector<array<string, 2>>>& ciphers,
+                                    const point* pk, curve* c) {
+  //   密文向量个数
+  int cipher_vector_num = ciphers.size();
+  if (cipher_vector_num <= 1) return 0;
+  int vector_size = ciphers[0].size();
+  //   check vector_size
+  for (size_t i = 1; i < cipher_vector_num; i++) {
+    if (vector_size != ciphers[i].size()) return err_code_short_enc;
+  }
+  //
+  auto p0 = c->new_point();
+  auto p1 = c->new_point();
+  for (size_t i = 0; i < vector_size; i++) {
+    // c1
+    string& tmp = ciphers[0][i][1];
+    p0->from_bin(tmp.data(), tmp.size());
+    for (size_t j = 1; j < cipher_vector_num; j++) {
+      p1->from_bin(ciphers[j][i][1].data(), ciphers[j][i][1].size());
+      c->add(p1.get(), p0.get());
+    }
+    tmp = p0->to_bin();
+    // c0
+    string& tmp2 = ciphers[0][i][0];
+    p0->from_bin(tmp2.data(), tmp2.size());
+    for (size_t j = 1; j < cipher_vector_num; j++) {
+      p1->from_bin(ciphers[j][i][0].data(), ciphers[j][i][0].size());
+      c->add(p1.get(), p0.get());
+    }
+    tmp2 = p0->to_bin();
+  }
+  return 0;
+}
 /// @brief
 /// @param plains
 /// @param cipher_0
