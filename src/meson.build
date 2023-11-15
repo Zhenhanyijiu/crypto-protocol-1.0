@@ -23,6 +23,7 @@ source_files = files(
   'ot/kkrt.cpp',
   'ot/ot_interface.cpp',
   'pke/short_enc.cpp',
+  'coder/bloomfilter.cpp',
 )
 
 crypto_lib = library('crypto_protocol',
