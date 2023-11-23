@@ -25,14 +25,14 @@ int release_channel(void *ch);
 #define RECV_BUFF_SIZE 1024 * 1024 * 30
 // #define RECV_BUFF_SIZE 256
 
-bool is_time_out(uint64_t start_time, long timeout_sec) {
-  std::chrono::steady_clock::time_point n0;
-  std::chrono::steady_clock::time_point n1 = std::chrono::steady_clock::now();
-  auto dur = std::chrono::duration_cast<std::chrono::nanoseconds>(n1 - n0);
-  uint64_t use_ns = dur.count() - start_time;
-  if (use_ns > timeout_sec * 1000000000) return true;
-  return false;
-}
+// bool is_time_out(uint64_t start_time, long timeout_sec) {
+//   std::chrono::steady_clock::time_point n0;
+//   std::chrono::steady_clock::time_point n1 =
+//   std::chrono::steady_clock::now(); auto dur =
+//   std::chrono::duration_cast<std::chrono::milliseconds>(n1 - n0); uint64_t
+//   use_ms = dur.count() - start_time; if (use_ms > timeout_sec * 1000) return
+//   true; return false;
+// }
 struct Channel {
   // int _socket_fd;
   int _conn;
@@ -75,7 +75,7 @@ void *init_channel(RoleType pltype, const char *address, int port) {
       int fg = connect(socket_fd, (struct sockaddr *)&stRemoteAddr,
                        sizeof(struct sockaddr));
       if (fg < 0) {
-        if (is_time_out(starttime, timeout_sec)) {
+        if (tpoint.get_time_piont_ms() > starttime) {
           printf("[tcpsocket.cpp]client 连接失败 error dial timeout!\n");
           close(socket_fd);
           return nullptr;

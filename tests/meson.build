@@ -74,3 +74,8 @@ executable('test_short_enc', 'test_short_enc.cpp',
   include_directories: includes,
   cpp_args: crypto_compile_args,
   dependencies: crypto_dependencies)
+
+executable('test_cm20', 'test_cm20.cpp',
+  include_directories: includes,
+  cpp_args: crypto_compile_args,
+  dependencies: crypto_dependencies)

@@ -85,6 +85,10 @@ class cm20_receiver {
   int getSendMatrixADBuff(conn *sock, vector<block> &receiverSet);
 
   int genenateAllHashesMap();
+
+  int recvFromSenderAndComputePSIOnce(conn *sock);
+  int getPsiResultsForAll(vector<u32> &psiResultsOutput);
+  int getPsiResultsForAllPirQuery(vector<vector<u32>> &psiResultsOutput);
 };
 
 }  // namespace fucrypto

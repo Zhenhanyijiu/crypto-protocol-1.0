@@ -892,7 +892,146 @@ int cm20_receiver::genenateAllHashesMap() {
   }
   return 0;
 }
+typedef struct ThreadPoolInfo {
+  u8 *recvBuff;
+  u64 recvBufSize;
+  u64 hash2LengthInBytes;
+  u64 lowL;
+  u64 up;
+  unordered_map<u64, std::vector<std::pair<block, u32>>> *HashMapVectorPtr;
+  int hashMapSize;
+  u32 psiResultId;
+  vector<u32> *psiResult;
+  vector<vector<u32>> *psiResultPirQuery;  // 匿踪查询用的结构
+} ThreadPoolInfo;
+u32 process_compute_psi_by_threadpool(ThreadPoolInfo *infoArg) {
+  // u64 recvBufSize = infoArg->recvBufSize;
+  // vector<u32_t> *psiResult = infoArg->psiResult;
+  u64 offset = 0;
+  for (u64 idx = 0; idx < infoArg->up - infoArg->lowL;
+       ++idx, offset += infoArg->hash2LengthInBytes) {
+#ifdef PIR_QUERY
+    // 记录对方的id的索引号
+    u32 sender_id_index = infoArg->lowL + idx;
+    // 记录对方的id的索引号
+#endif
+    u64 mapIdx = *(u64 *)(infoArg->recvBuff + offset);
+    // 这里加omp指令并不能提高性能，反而下降一倍多
+    for (int i = 0; i < infoArg->hashMapSize; i++) {
+      auto found = infoArg->HashMapVectorPtr[i].find(mapIdx);
+      if (found == infoArg->HashMapVectorPtr[i].end()) continue;
+      // 可能找到好几个
+      for (size_t j = 0; j < found->second.size(); ++j) {
+        if (memcmp(&(found->second[j].first), infoArg->recvBuff + offset,
+                   infoArg->hash2LengthInBytes) == 0) {
+          // psiMsgIndex->push_back(found->second[j].second);
+#ifdef PIR_QUERY
+          vector<u32> recv_index_send_index;
+          recv_index_send_index.emplace_back(found->second[j].second);
+          recv_index_send_index.emplace_back(sender_id_index);
+          // printf("   sender_id_index:%d\n", sender_id_index);
+          // printf("   recv_index_send_index[0]:%d\n",
+          // recv_index_send_index[0]); printf(" recv_index_send_index[1]:%d\n",
+          // recv_index_send_index[1]);
+          infoArg->psiResultPirQuery[0].emplace_back(recv_index_send_index);
+#else
+          infoArg->psiResult[0].emplace_back(found->second[j].second);
+#endif
 
+          break;
+        }
+      }
+    }
+  }
+  u32 psiResultId = infoArg->psiResultId;
+  // free内存
+  //  free(infoArg->recvBuff);
+  delete[] infoArg->recvBuff;
+  infoArg->recvBuff = nullptr;
+  // free(infoArg);
+  delete infoArg;
+  infoArg = nullptr;
+  return psiResultId;
+}
+
+int cm20_receiver::recvFromSenderAndComputePSIOnce(conn *sock) {
+  // return this->lowL < this->senderSize ? 0 : 1;
+  for (;;) {
+    if (this->lowL >= this->senderSize) break;
+    string recvBuff = sock->recv();
+    auto up = this->lowL + this->bucket2ForComputeH2Output < this->senderSize
+                  ? this->lowL + this->bucket2ForComputeH2Output
+                  : this->senderSize;
+    uint32_t recvBufSize = recvBuff.size();
+    if (recvBufSize != (up - this->lowL) * this->hash2LengthInBytes) {
+      return -122;
+    }
+    // ThreadPoolInfo *infoArg = (ThreadPoolInfo
+    // *)malloc(sizeof(ThreadPoolInfo));
+    ThreadPoolInfo *infoArg = new (std::nothrow) ThreadPoolInfo;
+    if (infoArg == nullptr) {
+      return -8;
+    }
+
+    memset(infoArg, 0, sizeof(ThreadPoolInfo));
+    // 赋值
+    //  infoArg->recvBuff = (u8_t *)malloc(recvBufSize);
+    infoArg->recvBuff = new (std::nothrow) u8[recvBufSize];
+    if (infoArg->recvBuff == nullptr) {
+      return -8;
+    }
+    memcpy(infoArg->recvBuff, recvBuff.data(), recvBufSize);
+    infoArg->recvBufSize = recvBufSize;
+    infoArg->hash2LengthInBytes = this->hash2LengthInBytes;
+    infoArg->lowL = this->lowL;
+    infoArg->up = up;
+    infoArg->HashMapVectorPtr = this->HashMapVector.data();
+    infoArg->hashMapSize = this->HashMapVector.size();
+    infoArg->psiResultId = this->indexId;
+#ifdef PIR_QUERY
+    infoArg->psiResultPirQuery =
+        (vector<vector<u32>> *)(this->psiResultPirQuery.data()) + this->indexId;
+#else
+    infoArg->psiResult =
+        (vector<u32> *)(this->psiResults.data()) + this->indexId;
+#endif
+    // 赋值end
+    this->psiResultsIndex.emplace_back(this->psiComputePool->enqueue(
+        process_compute_psi_by_threadpool, infoArg));
+    this->lowL += this->bucket2ForComputeH2Output;
+    this->indexId++;
+  }
+  return 0;
+}
+
+int cm20_receiver::getPsiResultsForAll(vector<u32> &psiResultsOutput) {
+  u64 psiResultsSize = this->psiResultsIndex.size();
+  //   printf("[cm20.cpp] psiResultsIndex size:%ld\n", psiResultsSize);
+  for (u64 i = 0; i < psiResultsSize; i++) {
+    u32 resultIndex = (this->psiResultsIndex)[i].get();
+    for (size_t j = 0; j < this->psiResults[resultIndex].size(); j++) {
+      psiResultsOutput.emplace_back(this->psiResults[resultIndex][j]);
+    }
+  }
+  return 0;
+}
+
+int cm20_receiver::getPsiResultsForAllPirQuery(
+    vector<vector<u32>> &psiResultsOutput) {
+  u64 psiResultsSize = this->psiResultsIndex.size();
+  //   printf("[cm20.cpp][pir-query] psiResultsIndex size:%ld\n",
+  //   psiResultsSize);
+  for (u64 i = 0; i < psiResultsSize; i++) {
+    u32 resultIndex = (this->psiResultsIndex)[i].get();
+    for (int j = 0; j < this->psiResultPirQuery[resultIndex].size(); j++) {
+      psiResultsOutput.emplace_back(this->psiResultPirQuery[resultIndex][j]);
+    }
+  }
+  //   printf("[cm20.cpp][pir-query] psiResults in
+  //   getPsiResultsForAll,size:%ld\n",
+  //          psiResultsOutput.size());
+  return 0;
+}
 ///////////////////////////////////////////////////////////////
 // 并行逻辑
 // 多线程处理，计算Hash1
