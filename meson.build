@@ -44,6 +44,7 @@ crypto_compile_args = [
 '-msse4.1',
 '-maes',
 '-mpclmul',
+'-DPIR_QUERY',
 ]
 
 # absl_dep = dependency('absl', modules: ['absl::base', 'absl::variant', 'absl::strings'])
