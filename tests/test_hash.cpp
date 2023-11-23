@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <bits/stdc++.h>
-#include "crypto-protocol/futime.h"
+#include "crypto-protocol/utils.h"
 #include "crypto-protocol/hasherimpl.h"
 using namespace fucrypto;
 using namespace std;
@@ -50,7 +50,8 @@ void test_hasher(int hash_type) {
     default:
       break;
   }
-  uint64_t start_t = get_time_now<uint64_t>();
+  time_point tpoint;
+  //   uint64_t start_t = tpoint.get_time_piont_ms();
   //   oc::ROracle ro;
   for (int i = 0; i < 10000000; i++) {
     hh->hasher_reset();
@@ -59,7 +60,7 @@ void test_hasher(int hash_type) {
     hh->hasher_final(out, 32);
     // print_out((uint8_t *)out, 32);
   }
-  float ret = get_use_time<float>(start_t, MS);
+  auto ret = tpoint.get_time_piont_ms();
   cout << all_type[hash_type] << " use time:" << ret << " ms" << endl;
 }
 

@@ -6,7 +6,7 @@ buffersocket::buffersocket(const buffersocket& buffsock) {}
 buffersocket::~buffersocket() {
   cout << "buffersocket::~buffersocket 析构" << endl;
 }
-int buffersocket::send(string data) {
+int buffersocket::send(const string data) {
   _send_buf.push_back(data);
   return 0;
 }

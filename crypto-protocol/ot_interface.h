@@ -4,20 +4,21 @@
 #include <cryptoTools/Common/BitVector.h>
 #include <bits/stdc++.h>
 #include "crypto-protocol/fusocket.h"
+#include "crypto-protocol/config.h"
 // using namespace oc;
 // using namespace std;
 namespace fucrypto {
 //   "secp256k1",
 //   "prime256v1",
 //   "secp384r1",
-struct config_param {
-  std::string ecc_lib_name = "openssl";
-  std::string curve_name = "secp256k1";
-  std::string ot_name = "np99";
-  std::string ote_name = "iknp";
-  std::string ot_n_1_name = "kkrt";
-  std::string hasher_name = "sha256";
-};
+// struct config_param {
+//   std::string ecc_lib_name = "openssl";
+//   std::string curve_name = "secp256k1";
+//   std::string ot_name = "np99";
+//   std::string ote_name = "iknp";
+//   std::string ot_n_1_name = "kkrt";
+//   std::string hasher_name = "sha256";
+// };
 extern config_param default_config_param;
 class ot_sender {
  public:

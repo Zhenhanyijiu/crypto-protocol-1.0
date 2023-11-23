@@ -14,8 +14,7 @@ source_files = files(
   'tools/fulog.cpp',
   'tools/tcpsocket.cpp',
   'hash/hasherimpl.cpp',
-  'hash/hasher.cpp',
-  'ecc/eccopenssl.cpp',  
+  'hash/hasher.cpp',  
   'ecc/fuecc_open.cpp',  
   'ecc/fuecc.cpp',
   'ot/ot_base.cpp',
@@ -24,6 +23,8 @@ source_files = files(
   'ot/ot_interface.cpp',
   'pke/short_enc.cpp',
   'coder/bloomfilter.cpp',
+#   
+  'psi/cm20.cpp',
 )
 
 crypto_lib = library('crypto_protocol',

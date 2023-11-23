@@ -1,6 +1,6 @@
 #include "crypto-protocol/short_enc.h"
 #include "crypto-protocol/fulog.h"
-#include "crypto-protocol/futime.h"
+#include "crypto-protocol/utils.h"
 using namespace fucrypto;
 
 struct argv_param {

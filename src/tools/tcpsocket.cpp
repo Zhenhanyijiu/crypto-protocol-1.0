@@ -1,5 +1,5 @@
 #include "crypto-protocol/tcpsocket.h"
-#include "crypto-protocol/futime.h"
+#include "crypto-protocol/utils.h"
 #include <stdio.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -62,7 +62,8 @@ void *init_channel(RoleType pltype, const char *address, int port) {
 
     // 连接方法： 传入句柄，目标地址，和大小
     // long starttime = start_time_channel();
-    uint64_t starttime = get_time_now<uint64_t>();
+    time_point tpoint;
+    uint64_t starttime = tpoint.get_time_piont_ms();
     printf("[tcpsocket.cpp] starttime:%ld\n", starttime);
     long timeout_sec = 3600;
     while (1) {

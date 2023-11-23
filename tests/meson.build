@@ -42,10 +42,10 @@ executable('test_hash', 'test_hash.cpp',
   include_directories: includes,
   cpp_args: crypto_compile_args,
   dependencies: crypto_dependencies)
-executable('test_ecc', 'test_eccopenssl.cpp',
-  include_directories: includes,
-  cpp_args: crypto_compile_args,
-  dependencies: crypto_dependencies)
+# executable('test_ecc', 'test_eccopenssl.cpp',
+#   include_directories: includes,
+#   cpp_args: crypto_compile_args,
+#   dependencies: crypto_dependencies)
 executable('test_ecc_open', 'test_fuecc_open.cpp',
   include_directories: includes,
   cpp_args: crypto_compile_args,
