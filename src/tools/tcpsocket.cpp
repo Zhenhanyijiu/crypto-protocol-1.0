@@ -63,8 +63,8 @@ void *init_channel(RoleType pltype, const char *address, int port) {
     // 连接方法： 传入句柄，目标地址，和大小
     // long starttime = start_time_channel();
     time_point tpoint;
-    uint64_t starttime = tpoint.get_time_piont_ms();
-    printf("[tcpsocket.cpp] starttime:%ld\n", starttime);
+    // uint64_t starttime = tpoint.get_time_piont_ms();
+    // printf("[tcpsocket.cpp] starttime:%ld\n", starttime);
     long timeout_sec = 3600;
     while (1) {
       socket_fd = socket(AF_INET, SOCK_STREAM, 0);  // 建立socket
@@ -75,7 +75,7 @@ void *init_channel(RoleType pltype, const char *address, int port) {
       int fg = connect(socket_fd, (struct sockaddr *)&stRemoteAddr,
                        sizeof(struct sockaddr));
       if (fg < 0) {
-        if (tpoint.get_time_piont_ms() > starttime) {
+        if (tpoint.get_time_piont_ms() > timeout_sec * 1000) {
           printf("[tcpsocket.cpp]client 连接失败 error dial timeout!\n");
           close(socket_fd);
           return nullptr;

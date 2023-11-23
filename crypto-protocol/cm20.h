@@ -27,7 +27,7 @@ class cm20_sender {
   oc::BitVector choicesWidthInput;
   vector<oc::block> recoverMsgWidthOutput;
   //   vector<oc::block> uBuffOutput;
-  vector<oc::u8> hashOutputBuff;
+  //   vector<oc::u8> hashOutputBuff;
   vector<vector<oc::u8>> transHashInputs;
   vector<vector<oc::u8>> hashInputs;
   oc::u64 lowL;
@@ -41,6 +41,10 @@ class cm20_sender {
               oc::u64 bucket2ForComputeH2Output = 256);
   int recoverMatrixC(conn *sock, vector<block> &senderSet);
   int computeHashOutputToReceiverOnce(conn *sock);
+  int get_count() {
+    return (senderSize + bucket2ForComputeH2Output - 1) /
+           bucket2ForComputeH2Output;
+  };
 };
 void transform_input_to_block(const vector<string> &dataSetInput,
                               vector<block> &dataSetOutput, int threadNum);
@@ -63,7 +67,7 @@ class cm20_receiver {
   u64 hash2LengthInBytes;
   vector<array<block, 2>> encMsgOutput;
   block commonSeed;
-  vector<u8> sendMatrixADBuff;
+  //   vector<u8> sendMatrixADBuff;
   vector<vector<u8>> transHashInputs;
   // std::unordered_map<u64, std::vector<std::pair<block, u32>>> allHashes;
   vector<unordered_map<u64, std::vector<std::pair<block, u32>>>> HashMapVector;
@@ -87,8 +91,14 @@ class cm20_receiver {
   int genenateAllHashesMap();
 
   int recvFromSenderAndComputePSIOnce(conn *sock);
+  int recvFromSenderAndComputePSIOnce_pir(conn *sock);
   int getPsiResultsForAll(vector<u32> &psiResultsOutput);
   int getPsiResultsForAllPirQuery(vector<vector<u32>> &psiResultsOutput);
+
+  int get_count() {
+    return (senderSize + bucket2ForComputeH2Output - 1) /
+           bucket2ForComputeH2Output;
+  };
 };
 
 }  // namespace fucrypto

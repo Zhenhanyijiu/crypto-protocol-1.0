@@ -1,4 +1,5 @@
 #include "crypto-protocol/cm20.h"
+#include "crypto-protocol/fulog.h"
 #include "crypto-protocol/tcpsocket.h"
 #include "cryptoTools/Common/Defines.h"
 #include <bits/stdc++.h>
@@ -7,12 +8,13 @@ using namespace fucrypto;
 struct param {
   string common_seed = "0123456789abcdef";
   oc::u64 sender_size = 1000000;
-  oc::u64 matrix_width = 128;
-  oc::u64 logHeight = 20;
+  oc::u64 matrix_width = 176;
+  oc::u64 logHeight = 21;
   int threadNum = 1;
   oc::u64 hash2LengthInBytes = 10;
-  oc::u64 bucket2ForComputeH2Output = 256;
-  oc::u64 recver_size = 30000;
+  //   oc::u64 bucket2ForComputeH2Output = 256;
+  oc::u64 bucket2ForComputeH2Output = 2000000;
+  oc::u64 recver_size = 310000;
 };
 param default_param;
 void get_data(vector<block> &senderSet, vector<block> &recverSet) {
@@ -36,10 +38,12 @@ static void run_cm20_sender(vector<block> &senderSet) {
                          default_param.hash2LengthInBytes,
                          default_param.bucket2ForComputeH2Output);
   cm20sender.recoverMatrixC(&c, senderSet);
-  cout << "============== 1" << endl;
-  ;
+
   cm20sender.computeHashOutputToReceiverOnce(&c);
-  cout << "============== 2" << endl;
+
+  //   cout << "cm20sender.get_count:" << cm20sender.get_count() << endl;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), ">> cm20sender.get_count:{}",
+                     cm20sender.get_count());
 }
 static void run_cm20_recver(vector<block> &recverSet) {
   connection c(0, "127.0.0.1", 9300);
@@ -51,18 +55,24 @@ static void run_cm20_recver(vector<block> &recverSet) {
                            default_param.hash2LengthInBytes,
                            default_param.bucket2ForComputeH2Output);
   cm20recver.getSendMatrixADBuff(&c, recverSet);
-  cout << "============== 3" << endl;
+  //   cout << "============== 3" << endl;
   cm20recver.genenateAllHashesMap();
-  cout << "============== 4" << endl;
+  //   cout << "============== 4" << endl;
 
   cm20recver.recvFromSenderAndComputePSIOnce(&c);
-  cout << "============== 5" << endl;
+  //   cout << "============== 5" << endl;
 
   vector<u32> psiResultsOutput;
   cm20recver.getPsiResultsForAll(psiResultsOutput);
-  cout << "============== 6" << endl;
+  //   cout << "============== 6" << endl;
 
-  cout << "=== psiResultsOutput.size:" << psiResultsOutput.size() << endl;
+  //   cout << "=== psiResultsOutput.size:" << psiResultsOutput.size() << endl;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     ">> === psiResultsOutput.size:{}",
+                     psiResultsOutput.size());
+  //   cout << "cm20recver.get_count:" << cm20recver.get_count() << endl;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), ">> cm20recver.get_count:{}",
+                     cm20recver.get_count());
 }
 static void test_cm20_psi() {
   vector<block> senderSet;
@@ -103,7 +113,7 @@ static void run_cm20_recver_pir(vector<block> &recverSet) {
   cm20recver.genenateAllHashesMap();
   cout << "============== 4" << endl;
 
-  cm20recver.recvFromSenderAndComputePSIOnce(&c);
+  cm20recver.recvFromSenderAndComputePSIOnce_pir(&c);
   cout << "============== 5" << endl;
 
   vector<vector<u32>> psiResultsOutput;
@@ -134,6 +144,7 @@ static void test_cm20_psi_pir() {
 
 int main(int argc, char **argv) {
   cout << "======= test cm20 ========" << endl;
+  //   test_cm20_psi();
   test_cm20_psi_pir();
   return 0;
 }

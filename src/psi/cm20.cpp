@@ -35,8 +35,6 @@ cm20_sender::cm20_sender(conn *sock, u8 *commonSeedIn, u64 senderSizeIn,
   // 初始化一个向量r，长度为width
   this->choicesWidthInput.resize(this->matrixWidth);
   this->choicesWidthInput.randomize(localRng);
-  this->hashOutputBuff.resize(this->hash2LengthInBytes *
-                              this->bucket2ForComputeH2Output);
   this->hashInputs.resize(this->bucket2ForComputeH2Output);
   for (u64 i = 0; i < this->bucket2ForComputeH2Output; i++) {
     this->hashInputs[i].resize(this->matrixWidthInBytes);
@@ -359,8 +357,15 @@ int cm20_sender::recoverMatrixC(conn *sock, vector<block> &senderSet) {
 }
 int cm20_sender::computeHashOutputToReceiverOnce(conn *sock) {
   //  this->lowL < this->senderSize
+  //   vector<oc::u8> hashOutputBuff
+  //   this->hashOutputBuff.resize(this->hash2LengthInBytes *
+  //                               this->bucket2ForComputeH2Output);
+  string hashOutputBuff(
+      this->hash2LengthInBytes * this->bucket2ForComputeH2Output, '\0');
+  int count = 0;
   for (;;) {
     if (this->lowL >= this->senderSize) break;
+    count++;
     auto upR = this->lowL + this->bucket2ForComputeH2Output < this->senderSize
                    ? this->lowL + this->bucket2ForComputeH2Output
                    : this->senderSize;
@@ -391,17 +396,21 @@ int cm20_sender::computeHashOutputToReceiverOnce(conn *sock) {
       ro->hasher_update((char *)this->hashInputs[j - this->lowL].data(),
                         this->matrixWidthInBytes);
       ro->hasher_final(hashOutput, 32);
-      memcpy(this->hashOutputBuff.data() + offset, hashOutput,
+      memcpy((char *)(hashOutputBuff.data() + offset), hashOutput,
              this->hash2LengthInBytes);
     }
     // *sendBuffSize = (upR - this->lowL) * this->hash2LengthInBytes;
     // *sendBuff = this->hashOutputBuff.data();
-
-    sock->send(string((char *)this->hashOutputBuff.data(),
-                      (upR - this->lowL) * this->hash2LengthInBytes));
+    if (count != get_count()) {
+      sock->send(hashOutputBuff);
+    } else {
+      sock->send(string((char *)hashOutputBuff.data(),
+                        (upR - this->lowL) * this->hash2LengthInBytes));
+    }
     this->lowL += this->bucket2ForComputeH2Output;
   }
-
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     ">> cm20_sender send hash count:{}", count);
   return 0;
 }
 ///////////////////////////////////////////////////////////////
@@ -423,12 +432,13 @@ cm20_receiver::cm20_receiver(conn *sock, u8 *commonSeedIn, u64 receiverSizeIn,
   this->receiverSizeInBytes = (receiverSizeIn + 7) >> 3;
   this->logHeight = logHeightIn;
   this->height = 1 << this->logHeight;
-  this->heightInBytes = (this->height + 7) >> 3;  // 除以8
+  //   除以8
+  this->heightInBytes = (this->height + 7) >> 3;
   this->bucket1 = 256;
   this->bucket2ForComputeH2Output = bucket2ForComputeH2Out;  // default 256
   // this->h1LengthInBytes = 32;
   this->hash2LengthInBytes = hash2LengthInBytesIn;
-  this->sendMatrixADBuff.resize(this->heightInBytes * this->matrixWidth);
+  //   this->sendMatrixADBuff.resize(this->heightInBytes * this->matrixWidth);
   this->transHashInputs.resize(this->matrixWidth);
   for (u64 i = 0; i < this->matrixWidth; ++i) {
     this->transHashInputs[i].resize(this->receiverSizeInBytes);
@@ -696,6 +706,8 @@ int cm20_receiver::getSendMatrixADBuff(conn *sock, vector<block> &receiverSet) {
   //   cout << "i:" << i << "," << commonKeys[i] << endl;
   // }
   cout << endl;
+  //   this->sendMatrixADBuff.resize(this->heightInBytes * this->matrixWidth);
+  string sendMatrixADBuff(this->heightInBytes * this->matrixWidth, '\0');
   // 给参数赋值,重要
   for (int k = 0; k < threadNum; k++) {
     infoArgs[k].threadId = k;
@@ -736,7 +748,7 @@ int cm20_receiver::getSendMatrixADBuff(conn *sock, vector<block> &receiverSet) {
         (vector<u8> *)(this->transHashInputs.data()) + infoArgs[k].wLeftBegin;
     // 17
     infoArgs[k].sendMatrixADBuffPtr =
-        (u8 *)(this->sendMatrixADBuff.data()) +
+        (u8 *)(sendMatrixADBuff.data()) +
         (infoArgs[k].wLeftBegin) * (this->heightInBytes);
   }
   for (int i = 0; i < threadNum; i++) {
@@ -770,8 +782,9 @@ int cm20_receiver::getSendMatrixADBuff(conn *sock, vector<block> &receiverSet) {
   // 将uBuff输出并发送给对方
   //   *sendMatrixADBuff = this->sendMatrixADBuff.data();
   //   *sendMatixADBuffSize = this->heightInBytes * this->matrixWidth;
-  sock->send(string((char *)this->sendMatrixADBuff.data(),
-                    this->heightInBytes * this->matrixWidth));
+  //   sock->send(string((char *)this->sendMatrixADBuff.data(),
+  //                     this->heightInBytes * this->matrixWidth));
+  sock->send(sendMatrixADBuff);
   /****************************/
   return 0;
 }
@@ -910,11 +923,6 @@ u32 process_compute_psi_by_threadpool(ThreadPoolInfo *infoArg) {
   u64 offset = 0;
   for (u64 idx = 0; idx < infoArg->up - infoArg->lowL;
        ++idx, offset += infoArg->hash2LengthInBytes) {
-#ifdef PIR_QUERY
-    // 记录对方的id的索引号
-    u32 sender_id_index = infoArg->lowL + idx;
-    // 记录对方的id的索引号
-#endif
     u64 mapIdx = *(u64 *)(infoArg->recvBuff + offset);
     // 这里加omp指令并不能提高性能，反而下降一倍多
     for (int i = 0; i < infoArg->hashMapSize; i++) {
@@ -925,7 +933,46 @@ u32 process_compute_psi_by_threadpool(ThreadPoolInfo *infoArg) {
         if (memcmp(&(found->second[j].first), infoArg->recvBuff + offset,
                    infoArg->hash2LengthInBytes) == 0) {
           // psiMsgIndex->push_back(found->second[j].second);
-#ifdef PIR_QUERY
+
+          infoArg->psiResult[0].emplace_back(found->second[j].second);
+
+          break;
+        }
+      }
+    }
+  }
+  u32 psiResultId = infoArg->psiResultId;
+  // free内存
+  //  free(infoArg->recvBuff);
+  delete[] infoArg->recvBuff;
+  infoArg->recvBuff = nullptr;
+  // free(infoArg);
+  delete infoArg;
+  infoArg = nullptr;
+  return psiResultId;
+}
+
+u32 process_compute_psi_by_threadpool_pir(ThreadPoolInfo *infoArg) {
+  // u64 recvBufSize = infoArg->recvBufSize;
+  // vector<u32_t> *psiResult = infoArg->psiResult;
+  u64 offset = 0;
+  for (u64 idx = 0; idx < infoArg->up - infoArg->lowL;
+       ++idx, offset += infoArg->hash2LengthInBytes) {
+    // 记录对方的id的索引号
+    u32 sender_id_index = infoArg->lowL + idx;
+    // 记录对方的id的索引号
+
+    u64 mapIdx = *(u64 *)(infoArg->recvBuff + offset);
+    // 这里加omp指令并不能提高性能，反而下降一倍多
+    for (int i = 0; i < infoArg->hashMapSize; i++) {
+      auto found = infoArg->HashMapVectorPtr[i].find(mapIdx);
+      if (found == infoArg->HashMapVectorPtr[i].end()) continue;
+      // 可能找到好几个
+      for (size_t j = 0; j < found->second.size(); ++j) {
+        if (memcmp(&(found->second[j].first), infoArg->recvBuff + offset,
+                   infoArg->hash2LengthInBytes) == 0) {
+          // psiMsgIndex->push_back(found->second[j].second);
+
           vector<u32> recv_index_send_index;
           recv_index_send_index.emplace_back(found->second[j].second);
           recv_index_send_index.emplace_back(sender_id_index);
@@ -934,10 +981,6 @@ u32 process_compute_psi_by_threadpool(ThreadPoolInfo *infoArg) {
           // recv_index_send_index[0]); printf(" recv_index_send_index[1]:%d\n",
           // recv_index_send_index[1]);
           infoArg->psiResultPirQuery[0].emplace_back(recv_index_send_index);
-#else
-          infoArg->psiResult[0].emplace_back(found->second[j].second);
-#endif
-
           break;
         }
       }
@@ -956,9 +999,11 @@ u32 process_compute_psi_by_threadpool(ThreadPoolInfo *infoArg) {
 
 int cm20_receiver::recvFromSenderAndComputePSIOnce(conn *sock) {
   // return this->lowL < this->senderSize ? 0 : 1;
+  int count = 0;
   for (;;) {
     if (this->lowL >= this->senderSize) break;
     string recvBuff = sock->recv();
+    count++;
     auto up = this->lowL + this->bucket2ForComputeH2Output < this->senderSize
                   ? this->lowL + this->bucket2ForComputeH2Output
                   : this->senderSize;
@@ -988,19 +1033,71 @@ int cm20_receiver::recvFromSenderAndComputePSIOnce(conn *sock) {
     infoArg->HashMapVectorPtr = this->HashMapVector.data();
     infoArg->hashMapSize = this->HashMapVector.size();
     infoArg->psiResultId = this->indexId;
-#ifdef PIR_QUERY
-    infoArg->psiResultPirQuery =
-        (vector<vector<u32>> *)(this->psiResultPirQuery.data()) + this->indexId;
-#else
+
     infoArg->psiResult =
         (vector<u32> *)(this->psiResults.data()) + this->indexId;
-#endif
-    // 赋值end
+
+    // 赋值 end
     this->psiResultsIndex.emplace_back(this->psiComputePool->enqueue(
         process_compute_psi_by_threadpool, infoArg));
     this->lowL += this->bucket2ForComputeH2Output;
     this->indexId++;
   }
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     ">> cm20_receiver recv hash count:{}", count);
+
+  return 0;
+}
+
+int cm20_receiver::recvFromSenderAndComputePSIOnce_pir(conn *sock) {
+  // return this->lowL < this->senderSize ? 0 : 1;
+  int count = 0;
+  for (;;) {
+    if (this->lowL >= this->senderSize) break;
+    string recvBuff = sock->recv();
+    count++;
+    auto up = this->lowL + this->bucket2ForComputeH2Output < this->senderSize
+                  ? this->lowL + this->bucket2ForComputeH2Output
+                  : this->senderSize;
+    uint32_t recvBufSize = recvBuff.size();
+    if (recvBufSize != (up - this->lowL) * this->hash2LengthInBytes) {
+      return -122;
+    }
+    // ThreadPoolInfo *infoArg = (ThreadPoolInfo
+    // *)malloc(sizeof(ThreadPoolInfo));
+    ThreadPoolInfo *infoArg = new (std::nothrow) ThreadPoolInfo;
+    if (infoArg == nullptr) {
+      return -8;
+    }
+
+    memset(infoArg, 0, sizeof(ThreadPoolInfo));
+    // 赋值
+    //  infoArg->recvBuff = (u8_t *)malloc(recvBufSize);
+    infoArg->recvBuff = new (std::nothrow) u8[recvBufSize];
+    if (infoArg->recvBuff == nullptr) {
+      return -8;
+    }
+    memcpy(infoArg->recvBuff, recvBuff.data(), recvBufSize);
+    infoArg->recvBufSize = recvBufSize;
+    infoArg->hash2LengthInBytes = this->hash2LengthInBytes;
+    infoArg->lowL = this->lowL;
+    infoArg->up = up;
+    infoArg->HashMapVectorPtr = this->HashMapVector.data();
+    infoArg->hashMapSize = this->HashMapVector.size();
+    infoArg->psiResultId = this->indexId;
+
+    infoArg->psiResultPirQuery =
+        (vector<vector<u32>> *)(this->psiResultPirQuery.data()) + this->indexId;
+
+    // 赋值end
+    this->psiResultsIndex.emplace_back(this->psiComputePool->enqueue(
+        process_compute_psi_by_threadpool_pir, infoArg));
+    this->lowL += this->bucket2ForComputeH2Output;
+    this->indexId++;
+  }
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     ">> cm20_receiver recv hash count:{}", count);
+
   return 0;
 }
 
