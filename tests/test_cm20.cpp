@@ -7,14 +7,14 @@ using namespace std;
 using namespace fucrypto;
 struct param {
   string common_seed = "0123456789abcdef";
-  oc::u64 sender_size = 1000000;
-  oc::u64 matrix_width = 176;
-  oc::u64 logHeight = 21;
+  oc::u64 sender_size = 100000;
+  oc::u64 matrix_width = 128;
+  oc::u64 logHeight = 20;
   int threadNum = 1;
   oc::u64 hash2LengthInBytes = 10;
   //   oc::u64 bucket2ForComputeH2Output = 256;
   oc::u64 bucket2ForComputeH2Output = 2000000;
-  oc::u64 recver_size = 310000;
+  oc::u64 recver_size = 3100;
 };
 param default_param;
 void get_data(vector<block> &senderSet, vector<block> &recverSet) {
@@ -32,7 +32,7 @@ void get_data(vector<block> &senderSet, vector<block> &recverSet) {
 }
 static void run_cm20_sender(vector<block> &senderSet) {
   connection c(1, "127.0.0.1", 9300);
-  cm20_sender cm20sender(&c, (oc::u8 *)(default_param.common_seed.data()),
+  cm20_sender cm20sender((oc::u8 *)(default_param.common_seed.data()),
                          default_param.sender_size, default_param.matrix_width,
                          default_param.logHeight, default_param.threadNum,
                          default_param.hash2LengthInBytes,
@@ -88,7 +88,7 @@ static void test_cm20_psi() {
 // pir
 static void run_cm20_sender_pir(vector<block> &senderSet) {
   connection c(1, "127.0.0.1", 9300);
-  cm20_sender cm20sender(&c, (oc::u8 *)(default_param.common_seed.data()),
+  cm20_sender cm20sender((oc::u8 *)(default_param.common_seed.data()),
                          default_param.sender_size, default_param.matrix_width,
                          default_param.logHeight, default_param.threadNum,
                          default_param.hash2LengthInBytes,
@@ -144,7 +144,7 @@ static void test_cm20_psi_pir() {
 
 int main(int argc, char **argv) {
   cout << "======= test cm20 ========" << endl;
-  //   test_cm20_psi();
+  test_cm20_psi();
   test_cm20_psi_pir();
   return 0;
 }
