@@ -2,6 +2,7 @@
 #include "crypto-protocol/fulog.h"
 #include "crypto-protocol/ot_interface.h"
 #include "crypto-protocol/hasher.h"
+#include "crypto-protocol/utils.h"
 #include <bits/stdc++.h>
 using namespace std;
 using namespace oc;
@@ -21,9 +22,7 @@ cm20_sender::cm20_sender(const string &common_seed, u64 sender_size,
   this->_sender_size_in_bytes = (this->_sender_size + 7) >> 3;
   this->_bucket1 = 256;
   this->_bucket2_send_hash = bucket2_send_hash;  // default 256
-
   this->_h2_len_in_bytes = h2_len_in_bytes;
-
   this->_hash_inputs.resize(this->_bucket2_send_hash);
   for (u64 i = 0; i < this->_bucket2_send_hash; i++) {
     this->_hash_inputs[i].resize(this->_mat_width_bytes);
@@ -34,11 +33,14 @@ cm20_sender::cm20_sender(const string &common_seed, u64 sender_size,
     memset(this->_trans_hash_inputs[i].data(), 0, this->_sender_size_in_bytes);
   }
   this->_low_left = (u64)0;
-  printf("[cm20.cpp] _h2_len_in_bytes:%ld,_bucket2_send_hash:%ld\n",
-         this->_h2_len_in_bytes, this->_bucket2_send_hash);
+  SPDLOG_LOGGER_INFO(
+      spdlog::default_logger(),
+      "cm20_sender,w:{},log_h:{},h2_length:{},_bucket2_send_hash:{}",
+      _mat_width, _log_height, _h2_len_in_bytes, _bucket2_send_hash);
 };
 int cm20_sender::set_base_ot(const oc::BitVector &choice_ote,
                              const vector<oc::block> &m_gens) {
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "cm20_sender,set_base_ot");
   if (choice_ote.size() != _mat_width || m_gens.size() != _mat_width)
     return err_code_cm20;
   _choice_ote = choice_ote;
@@ -90,28 +92,20 @@ typedef struct RecoverMatrixCInfo {
   const u8 *encMatrixABuffBegin;
 } RecoverMatrixCInfo;
 void process_recover_matrix_C(RecoverMatrixCInfo *infoArg) {
-  printf("[cm20.cpp] (process_recover_matrix_C) thread id:%d\n",
-         infoArg->threadId);
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "cm20_sender,(process_recover_matrix_C) thread id:{}",
+                     infoArg->threadId);
   int cycTimes = 0;
   u64 widthBucket1 = infoArg->widthBucket1;
   u64 bucket1 = infoArg->bucket1;
   u64 senderSize = infoArg->senderSize;
   u64 heightInBytes = infoArg->heightInBytes;
   u64 locationInBytes = infoArg->locationInBytes;
-  // block randomLocations[bucket1]; // 256个block
   vector<block> randomLocations(bucket1);
-  // u8 *matrixC[widthBucket1]; // 16
   vector<u8 *> matrixC(widthBucket1);
   vector<vector<u8>> matC(widthBucket1);
-  // u8 *transLocations[widthBucket1];
-  // vector<u8 *> transLocations(widthBucket1);
-  // vector<vector<u8>> trans(widthBucket1);
   for (u64 i = 0; i < widthBucket1; ++i) {
     // 256*1+4，每个元素为u8*，下面语句为创建一个u8*,260个u8
-    // transLocations[i] = new u8[senderSize * locationInBytes + sizeof(u32)];
-    // matrixC[i] = new u8[heightInBytes]; // 32
-    // trans[i].resize(senderSize * locationInBytes + sizeof(u32));
-    // transLocations[i] = trans[i].data();
     matC[i].resize(heightInBytes);
     matrixC[i] = matC[i].data();
   }
@@ -147,12 +141,6 @@ void process_recover_matrix_C(RecoverMatrixCInfo *infoArg) {
                                  randomLocations.data());
       for (u64 i = 0; i < w; ++i) {
         for (u64 j = low; j < up; ++j) {
-          // memcpy(transLocations[i] + j * locationInBytes,
-          //        (u8 *)(randomLocations.data() + (j - low)) + i *
-          //        locationInBytes, locationInBytes);
-          //
-          // auto location = (*(u32 *)(transLocations[i] + j * locationInBytes))
-          // & (infoArg->shift);
           auto location = (*(u32 *)((u8 *)(randomLocations.data() + (j - low)) +
                                     i * locationInBytes)) &
                           (infoArg->shift);
@@ -162,83 +150,65 @@ void process_recover_matrix_C(RecoverMatrixCInfo *infoArg) {
         }
       }
     }
-    // // Extend OTs and compute matrix C
-    // // u8 *recvMatrix;
-    // u64 offset1 = wLeft * heightInBytes;
-    // u64 offset2 = 0;
-    // for (u64 i = 0; i < w; ++i)
-    // {
-    //   PRNG prng(infoArg->recoverMsgWidthOutputPtr[i + wLeft]);
-    //   prng.get(matrixC[i], heightInBytes);
-    //   if (infoArg->choicesWidthInputPtr[i + wLeft])
-    //   {
-    //     for (u64 j = 0; j < heightInBytes; ++j)
-    //     {
-    //       matrixC[i][j] ^= (infoArg->recvMatrixADBuffBegin + offset1 +
-    //       offset2)[j];
-    //     }
-    //   }
-    //   offset2 += heightInBytes;
-    // }
-    // Compute hash inputs (transposed)
-    // for (u64 i = 0; i < w; ++i)
-    // {
-    //   for (u64 j = 0; j < senderSize; ++j)
-    //   {
-    //     auto location = (*(u32 *)(transLocations[i] + j * locationInBytes)) &
-    //     (infoArg->shift); infoArg->transHashInputsPtr[i + wLeft][j >> 3] |=
-    //         (u8)((bool)(matrixC[i][location >> 3] & (1 << (location & 7))))
-    //         << (j & 7);
-    //   }
-    // }
   }
-  //**************释放内存*************//
-  // for (u64 i = 0; i < widthBucket1; ++i)
-  // {
-  //   delete[] transLocations[i];
-  //   transLocations[i] = nullptr;
-  //   delete[] matrixC[i];
-  //   matrixC[i] = nullptr;
-  // }
 }
 
-int cm20_sender::recoverMatrixC(conn *sock, vector<block> &senderSet) {
-  ////////////////
+int cm20_sender::recover_matrix_c(conn *sock, vector<block> &senderSet) {
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "cm20_sender,recover_matrix_c begin ...");
+  string err_info = "error";
+  scope_guard err_on_exit([&]() {
+    SPDLOG_LOGGER_ERROR(spdlog::default_logger(), "cm20_sender,err_info:{}",
+                        err_info);
+    sock->close();
+  });
   if (_has_base_ot == false) {
+    SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                       "cm20_sender,_has_base_ot == false");
     PRNG rng(oc::sysRandomSeed());
-    // 初始化一个向量r，长度为width
     this->_choice_ote.resize(this->_mat_width);
     this->_choice_ote.randomize(rng);
     config_param param;
     auto ote = new_ote_receiver(param);
-    ote->receive(this->_choice_ote, this->_m_gens, sock);
+    if (ote == nullptr) {
+      err_info = "ote is nullptr error";
+      return err_code_cm20;
+    }
+    int fg = ote->receive(this->_choice_ote, this->_m_gens, sock);
+    if (fg) {
+      err_info = "ote->receive error";
+      return err_code_cm20;
+    }
+  } else {
+    SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                       "cm20_sender,_has_base_ot == true");
   }
-  // ///////////////
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "cm20_sender,receive matrix_a_d_recv before");
   string matrix_a_d_recv = sock->recv();
+  if (matrix_a_d_recv.empty()) {
+    err_info = "matrix_a_d_recv is null error";
+    return err_code_cm20;
+  }
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "cm20_sender,receive matrix_a_d_recv end");
   u8 *recvMatrixADBuff = (u8 *)matrix_a_d_recv.data();
   u64 recvMatixADBuffSize = matrix_a_d_recv.size();
   auto locationInBytes = (this->_log_height + 7) / 8;   // logHeight==1
   auto widthBucket1 = sizeof(block) / locationInBytes;  // 16/1
   u64 shift = (1 << this->_log_height) - 1;             // 全1
-  printf(
-      "[cm20.cpp] recover matrix "
-      "C,widthBucket1:%ld(16/loc),locationInBytes:%ld\n",
-      widthBucket1, locationInBytes);
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "cm20_sender,widthBucket1:{},:{}", widthBucket1,
+                     locationInBytes);
   if (recvMatixADBuffSize != this->_mat_width * this->_height_bytes) {
-    return -111;
+    return err_code_cm20;
   }
-  // u8 *transHashInputs[this->matrixWidth]; // width==60，矩阵宽度
-  printf("[cm20.cpp] ****** before cycle in recover MatrixC ******\n");
-  //   long start1 = start_time();
+
   int omp_num = _omp_num;
   u64 sumCount = 0;
   int isExit = 0;
-  printf("[cm20.cpp] ====== 参数准备开始 ======\n");
-  // RecoverMatrixCInfo infoArgs[threadNum];
+
   vector<RecoverMatrixCInfo> infoArgs(omp_num);
-  // block *senderSet = new block[senderSet1.size()];
-  // memcpy(senderSet, senderSet1.data(), senderSet1.size() * sizeof(block));
-  // 内存初始化为0
   memset(infoArgs.data(), 0, omp_num * sizeof(RecoverMatrixCInfo));
   // 对每个线程进行分配处理的矩阵的列数
   for (;;) {
@@ -259,35 +229,38 @@ int cm20_sender::recoverMatrixC(conn *sock, vector<block> &senderSet) {
       break;
     }
   }
-  printf("[cm20.cpp] omp 处理,sumCount:=%ld\n", sumCount);
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "cm20_sender, omp 处理,sumCount:{}", sumCount);
   // 不要漏掉余数
   if ((this->_mat_width - sumCount) != 0) {
     infoArgs[omp_num - 1].processNum += this->_mat_width - sumCount;
     infoArgs[omp_num - 1].aesKeyNum += 1;
   }
   for (int i = 0; i < omp_num; i++) {
-    printf("[cm20.cpp] procesNum[%2d]=:%2ld,", i, infoArgs[i].processNum);
+    SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                       "cm20_sender, procesNum[{}]:{}", i,
+                       infoArgs[i].processNum);
   }
-  printf("\n");
+
   for (int i = 0; i < omp_num; i++) {
-    printf("[cm20.cpp] aesKeyNum[%2d]=:%2ld,", i, infoArgs[i].aesKeyNum);
+    SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                       "cm20_sender, aesKeyNum[{}]:{}", i,
+                       infoArgs[i].aesKeyNum);
   }
   // 分配处理的矩阵的列数结束
-  // 最重要的一步，生成Fk函数的keys
+  // 最重要的一步，生成 Fk 函数的 keys
   PRNG commonPrng(this->_common_seed);
   vector<block> commonKeys;
   for (u64 wLeft = 0; wLeft < this->_mat_width; wLeft += widthBucket1) {
-    block comKey;
-    commonPrng.get((u8 *)&comKey, sizeof(block));
-    // commonKeys.push_back(comKey);
+    block comKey = commonPrng.get<block>();
     commonKeys.emplace_back(comKey);
   }
-  printf("\n[cm20.cpp] commonKeys size:%ld\n", commonKeys.size());
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "cm20_sender,commonKeys size:{}",
+                     commonKeys.size());
   // 最重要的一步，取出 _choice_ote
   u64 choiceSize = this->_choice_ote.size();
   vector<int> choiceVector;
   for (u64 i = 0; i < choiceSize; i++) {
-    // choiceVector.push_back(this->choicesWidthInput[i]);
     choiceVector.emplace_back(this->_choice_ote[i]);
   }
   // 给参数赋值
@@ -338,29 +311,25 @@ int cm20_sender::recoverMatrixC(conn *sock, vector<block> &senderSet) {
   }
 
   for (int i = 0; i < omp_num; i++) {
-    printf("[cm20.cpp] aesBegin[%2d]:%2ld,", i, infoArgs[i].aesComkeysBegin);
+    SPDLOG_LOGGER_INFO(spdlog::default_logger(), "cm20_sender,aesBegin[{}]:{}",
+                       i, infoArgs[i].aesComkeysBegin);
   }
-  printf("\n");
   for (int j = 0; j < omp_num; j++) {
-    printf("[cm20.cpp] wlfBegin[%2d]:%2ld,", j, infoArgs[j].wLeftBegin);
+    SPDLOG_LOGGER_INFO(spdlog::default_logger(), "cm20_sender,wlfBegin[{}]:{}",
+                       j, infoArgs[j].wLeftBegin);
   }
-  printf("\n[cm20.cpp] ====== 参数准备结束 ======\n");
-  printf("[cm20.cpp] ====== 并行处理恢复矩阵 C 开始,omp_num(%d) ======\n",
-         omp_num);
 
 #pragma omp parallel for num_threads(threadNum)
   for (int i = 0; i < omp_num; i++) {
     process_recover_matrix_C(infoArgs.data() + i);
   }
-  printf("[cm20.cpp] ====== 并行处理恢复矩阵 C 结束,omp_num(%d) ======\n",
-         omp_num);
-  printf("[cm20.cpp] ****** end cycle in recover MatrixC ******\n");
-  //   printf("[cm20.cpp] cycle 用时：%ldms\n", get_use_time(start1));
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "cm20_sender,并行处理恢复矩阵 C 结束 omp_num:{}", omp_num);
+  err_on_exit.dismiss();
   return 0;
 }
-int cm20_sender::computeHashOutputToReceiverOnce(conn *sock) {
-  string hashOutputBuff(this->_h2_len_in_bytes * this->_bucket2_send_hash,
-                        '\0');
+int cm20_sender::send_hash2_output(conn *sock) {
+  string hashOutputBuff(_h2_len_in_bytes * _bucket2_send_hash, '\0');
   int count = 0;
   for (;;) {
     if (this->_low_left >= this->_sender_size) break;
@@ -426,39 +395,22 @@ cm20_receiver::cm20_receiver(const string &common_seed, u64 recver_size,
   this->_height_bytes = (this->_height + 7) >> 3;
   this->_bucket1 = 256;
   this->_bucket2_send_hash = bucket2_send_hash;  // default 256
-  // this->h1LengthInBytes = 32;
   this->_h2_len_in_bytes = h2_len_in_bytes;
-  //   this->sendMatrixADBuff.resize(this->heightInBytes * this->matrixWidth);
   this->_trans_hash_inputs.resize(this->_mat_width);
   for (u64 i = 0; i < this->_mat_width; ++i) {
     this->_trans_hash_inputs[i].resize(this->_recver_size_in_bytes);
     memset(this->_trans_hash_inputs[i].data(), 0, this->_recver_size_in_bytes);
   }
-  //   this->_m_gens_pair.resize(this->_mat_width);
   this->_common_seed = toBlock((u8 *)common_seed.data());
-  // block localSeedBlock = toBlock((u8 *)localSeed);
-  srand(time(NULL));
-  int rn[4];
-  for (int i = 0; i < 4; i++) {
-    rn[i] = rand();
-  }
-  // init local rng seed
-  PRNG localRng(_mm_set_epi32(rn[0], rn[1], rn[2], rn[3]));
-  // PRNG localRng(_mm_set_epi32(101, 103, 107, 100));
   this->_low_left = (u64)0;
   this->_index_id = 0;
   this->_psi_compute_pool = new (std::nothrow) ThreadPool(this->_omp_num);
   if (this->_psi_compute_pool == nullptr) {
     return;
   }
-
   this->_psi_results.resize(this->_sender_size / this->_bucket2_send_hash + 2);
   this->_psi_result_pir.resize(this->_sender_size / this->_bucket2_send_hash +
                                2);
-  //   config_param param;
-  //   auto ote = new_ote_sender(param);
-  //   ote->send(this->_m_gens_pair, sock);
-  //   return this->iknpOteSender.init(localRng);
 };
 
 // 并行计算 MatrixAxorD,参数结构体
@@ -620,45 +572,55 @@ void process_compute_Matrix_AxorD(ComputeMatrixAxorDInfo *infoArg) {
   }
 }
 int cm20_receiver::set_base_ot(const vector<array<block, 2>> &m_gens_pair) {
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "cm20_receiver,set_base_ot start ...");
   if (m_gens_pair.size() != _mat_width) return err_code_cm20;
   _m_gens_pair = m_gens_pair;
   _has_base_ot = true;
   return 0;
 }
-int cm20_receiver::getSendMatrixADBuff(conn *sock, vector<block> &receiverSet) {
-  //////////////////
+int cm20_receiver::gen_matrix_u_a_d(conn *sock, vector<block> &receiverSet) {
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "cm20_receiver,gen_matrix_u_a_d start ...");
+  string err_info = "error";
+  scope_guard err_on_exit([&]() {
+    SPDLOG_LOGGER_ERROR(spdlog::default_logger(), "cm20_receiver,err_info:{}",
+                        err_info);
+    sock->close();
+  });
   if (_has_base_ot == false) {
     this->_m_gens_pair.resize(this->_mat_width);
     config_param param;
     auto ote = new_ote_sender(param);
-    ote->send(this->_m_gens_pair, sock);
+    if (!ote) {
+      err_info = "ote is null error";
+      return err_code_cm20;
+    }
+    int fg = ote->send(this->_m_gens_pair, sock);
+    if (fg) {
+      err_info = "ote->send error";
+      return err_code_cm20;
+    }
+    SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                       "cm20_receiver,_has_base_ot == false");
+  } else {
+    SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                       "cm20_receiver,_has_base_ot == true");
   }
-  //////////////////
-  // u32 locationInBytes = (this->logHeight + 7) / 8;
   u64 locationInBytes = (this->_log_height + 7) >> 3;
   u64 widthBucket1 = sizeof(block) / locationInBytes;
   u64 shift = (1 << this->_log_height) - 1;  // 全1
-  //////////// Initialization ///////////////////
-  PRNG commonPrng(this->_common_seed);
-  // block commonKey;
-  // AES commonAes;
+
   if (receiverSet.size() != this->_recver_size) {
-    return -111;
+    return err_code_cm20;
   }
-  /*********for cycle start*********/
-  //   printf("[cm20.cpp] (AD)widthBucket1(16/loc):%ld,locationInBytes:%ld\n",
-  //          widthBucket1, locationInBytes);
-  //   printf("\n[cm20.cpp] ====== 并行计算 AxorD 参数准备开始 ======\n");
+
   // 并行计算矩阵AxorD
   int threadNum = this->_omp_num;
   int sumCount = 0;
   int isExit = 0;
-  // ComputeMatrixAxorDInfo infoArgs[threadNum];
   vector<ComputeMatrixAxorDInfo> infoArgs(threadNum);
-  // block *receiverSet = new block[receiverSet1.size()];
-  // memcpy(receiverSet, receiverSet1.data(), receiverSet1.size() *
-  // sizeof(block));
-  // 将全部内存初始为0
+  // 将全部内存初始为 0
   memset(infoArgs.data(), 0, sizeof(ComputeMatrixAxorDInfo) * threadNum);
   // 为每一个线程生成参数数据,主要是处理的矩阵的列数
   for (;;) {
@@ -679,36 +641,34 @@ int cm20_receiver::getSendMatrixADBuff(conn *sock, vector<block> &receiverSet) {
       break;
     }
   }
-  //   printf("[cm20.cpp] debug sumCount:=%d\n", sumCount);
+
   // 不要漏掉余数
   if ((this->_mat_width - sumCount) != 0) {
     infoArgs[threadNum - 1].processNum += this->_mat_width - sumCount;
     infoArgs[threadNum - 1].aesKeyNum += 1;
   }
   for (int i = 0; i < threadNum; i++) {
-    // printf("[cm20.cpp] procesNum[%2d]:=%2ld,", i, infoArgs[i].processNum);
+    SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                       "cm20_receiver,procesNum[{}]:={}", i,
+                       infoArgs[i].processNum);
   }
-  //   printf("\n");
+
   for (int i = 0; i < threadNum; i++) {
-    // printf("[cm20.cpp] aesKeyNum[%2d]:=%2ld,", i, infoArgs[i].aesKeyNum);
+    SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                       "cm20_receiver,aesKeyNum[{}]:={}", i,
+                       infoArgs[i].aesKeyNum);
   }
   // 分配处理的矩阵的列数结束
-  // 最重要的一步，生成Fk函数的keys
+  // 最重要的一步，生成 Fk 函数的 keys
   vector<block> commonKeys;
+  PRNG commonPrng(this->_common_seed);
   for (u64 wLeft = 0; wLeft < this->_mat_width; wLeft += widthBucket1) {
-    block comKey;
-    commonPrng.get((u8 *)&comKey, sizeof(block));
-    // commonKeys.push_back(comKey);
+    block comKey = commonPrng.get<block>();
     commonKeys.emplace_back(comKey);
   }
-  // printf("\n[cm20.cpp] commonKeys size:%ld\n", commonKeys.size());
-  //   printf("\n>>>>>> [cm20.cpp] commonKeys size:%ld\n", commonKeys.size());
-  // for (int i = 0; i < commonKeys.size(); i++)
-  // {
-  //   cout << "i:" << i << "," << commonKeys[i] << endl;
-  // }
-  cout << endl;
-  //   this->sendMatrixADBuff.resize(this->heightInBytes * this->matrixWidth);
+
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "cm20_receiver,commonKeys size={}", commonKeys.size());
   string sendMatrixADBuff(this->_height_bytes * this->_mat_width, '\0');
   // 给参数赋值,重要
   for (int k = 0; k < threadNum; k++) {
@@ -755,40 +715,28 @@ int cm20_receiver::getSendMatrixADBuff(conn *sock, vector<block> &receiverSet) {
         (infoArgs[k].wLeftBegin) * (this->_height_bytes);
   }
   for (int i = 0; i < threadNum; i++) {
-    // printf("[cm20.cpp] aesBegin[%2d]:%2ld,", i, infoArgs[i].aesComkeysBegin);
+    SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                       "cm20_receiver,aesBegin[{}]:={}", i,
+                       infoArgs[i].aesComkeysBegin);
   }
-  //   printf("\n");
+
   for (int j = 0; j < threadNum; j++) {
-    // printf("[cm20.cpp] wlfBegin[%2d]:%2ld,", j, infoArgs[j].wLeftBegin);
+    SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                       "cm20_receiver,wlfBegin[{}]:={}", j,
+                       infoArgs[j].wLeftBegin);
   }
-  //   printf("\n[cm20.cpp] ====== 并行计算 AxorD 参数准备结束 ======\n");
-  //   printf("[cm20.cpp] ====== 开始并行计算矩阵 AxorD,threadNum(%d) ======\n",
-  //          threadNum);
-  // omp process
-  // printf("*************** sleep 10s ************\n");
-  // sleep(10);
-  // printf("*************** sleep 10s end ************\n");
 
 #pragma omp parallel for num_threads(threadNum)
   for (int i = 0; i < threadNum; i++) {
     process_compute_Matrix_AxorD(infoArgs.data() + i);
   }
-  // printf("*************** sleep 10s ************\n");
-  // sleep(10);
-  // printf("*************** sleep 10s end ************\n");
-  //   printf("[cm20.cpp] ====== 并行计算矩阵 AxorD 结束,threadNum(%d)
-  //   ======\n",
-  //          threadNum);
-  //   printf("[cm20.cpp] 计算 Hash1 之后,并行生成矩阵 A,D 用时:%ldms\n",
-  //          get_use_time(start0));
-  /*********for cycle end*********/
-  // 将uBuff输出并发送给对方
-  //   *sendMatrixADBuff = this->sendMatrixADBuff.data();
-  //   *sendMatixADBuffSize = this->heightInBytes * this->matrixWidth;
-  //   sock->send(string((char *)this->sendMatrixADBuff.data(),
-  //                     this->heightInBytes * this->matrixWidth));
   sock->send(sendMatrixADBuff);
-  /****************************/
+  int fg = gen_hash_map();
+  if (fg) {
+    err_info = "gen_hash_map error";
+    return fg;
+  }
+  err_on_exit.dismiss();
   return 0;
 }
 
@@ -807,25 +755,15 @@ typedef struct HashMapParallelInfo {
 } HashMapParallelInfo;
 // 并行生成hashmap 处理函数
 void process_for_hash_map(HashMapParallelInfo *infoArg) {
-  // printf("  tid:%d,startIndex:%ld\n", infoArg->threadId,
-  // infoArg->startIndex); printf("  tid:%d,processNum:%ld\n",
-  // infoArg->threadId, infoArg->processNum); printf("
-  // tid:%d,receiverSize:%ld\n", infoArg->threadId, infoArg->receiverSize);
-  // printf("  tid:%d,bucket2ForComputeH2Output:%ld\n", infoArg->threadId,
-  // infoArg->bucket2ForComputeH2Output);
-  //   printf("[cm20.cpp] (process_for_hash_map) thread id:%d\n",
-  //   infoArg->threadId);
-  // RandomOracle H(infoArg->hash2LengthInBytes);
-  // u8 hashOutput[sizeof(block)];
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "cm20_receiver,process_for_hash_map");
   auto ro = (*hasher_map_ptr)["sha256"]();
-  //   ROracle ro;
+
   char hashOutput[32];
-  // 这种写法当 infoArg->bucket2ForComputeH2Output==5000000时coredump
-  //  u8 *hashInputs[infoArg->bucket2ForComputeH2Output];
+
   vector<u8 *> hashInputs(infoArg->bucket2ForComputeH2Output);
   vector<vector<u8>> hashInputsV(infoArg->bucket2ForComputeH2Output);
   for (u64 i = 0; i < infoArg->bucket2ForComputeH2Output; ++i) {
-    // hashInputs[i] = new u8[infoArg->matrixWidthInBytes];
     hashInputsV[i].resize(infoArg->matrixWidthInBytes);
     hashInputs[i] = hashInputsV[i].data();
   }
@@ -848,12 +786,6 @@ void process_for_hash_map(HashMapParallelInfo *infoArg) {
       }
     }
     for (u64 j = low; j < up; ++j) {
-      // if (j == low)
-      // {
-      //   cout << "   最后计算:" << j << "," << *(block *)hashInputs[j - low]
-      //   << endl;
-      // }
-
       ro->hasher_reset();
       ro->hasher_update((char *)hashInputs[j - low],
                         infoArg->matrixWidthInBytes);
@@ -867,12 +799,8 @@ void process_for_hash_map(HashMapParallelInfo *infoArg) {
   }
 }
 
-int cm20_receiver::genenateAllHashesMap() {
-  /////////////////// Compute hash outputs ///////////////////////////
-  // H2
-  // RandomOracle H(this->hash2LengthInBytes);
-  // u8 hashOutput[sizeof(block)];
-  // u8 *hashInputs[this->bucket2ForComputeH2Output];
+int cm20_receiver::gen_hash_map() {
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "cm20_receiver,gen_hash_map");
   int threadNum = this->_omp_num;
   this->_hash_map_vector.resize(threadNum);
   u64 processLen = this->_recver_size / threadNum;
@@ -901,7 +829,6 @@ int cm20_receiver::genenateAllHashesMap() {
              *)(this->_hash_map_vector.data() + i);
   }
   // 给每个线程的参数赋值结束
-//   printf("[cm20.cpp] 并行计算 hashmap 开始,threadNum(%d)\n", threadNum);
 #pragma omp parallel for num_threads(threadNum)
   for (int i = 0; i < threadNum; i++) {
     process_for_hash_map(infoArgs + i);
@@ -921,8 +848,6 @@ typedef struct ThreadPoolInfo {
   vector<vector<u32>> *psiResultPirQuery;  // 匿踪查询用的结构
 } ThreadPoolInfo;
 u32 process_compute_psi_by_threadpool(ThreadPoolInfo *infoArg) {
-  // u64 recvBufSize = infoArg->recvBufSize;
-  // vector<u32_t> *psiResult = infoArg->psiResult;
   u64 offset = 0;
   for (u64 idx = 0; idx < infoArg->up - infoArg->lowL;
        ++idx, offset += infoArg->hash2LengthInBytes) {
@@ -1000,12 +925,23 @@ u32 process_compute_psi_by_threadpool_pir(ThreadPoolInfo *infoArg) {
   return psiResultId;
 }
 
-int cm20_receiver::recvFromSenderAndComputePSIOnce(conn *sock) {
-  // return this->lowL < this->senderSize ? 0 : 1;
+int cm20_receiver::recv_hash2_output(conn *sock) {
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "cm20_receiver,recv_hash2_output start ...");
+  string err_info = "error";
+  scope_guard err_on_exit([&]() {
+    SPDLOG_LOGGER_ERROR(spdlog::default_logger(),
+                        "cm20_receiver,recv_hash2_output err_info:{}");
+    sock->close();
+  });
   int count = 0;
   for (;;) {
     if (this->_low_left >= this->_sender_size) break;
     string recvBuff = sock->recv();
+    if (recvBuff.empty()) {
+      err_info = "recv h2 data error";
+      return err_code_cm20;
+    }
     count++;
     auto up = this->_low_left + this->_bucket2_send_hash < this->_sender_size
                   ? this->_low_left + this->_bucket2_send_hash
@@ -1014,11 +950,9 @@ int cm20_receiver::recvFromSenderAndComputePSIOnce(conn *sock) {
     if (recvBufSize != (up - this->_low_left) * this->_h2_len_in_bytes) {
       return -122;
     }
-    // ThreadPoolInfo *infoArg = (ThreadPoolInfo
-    // *)malloc(sizeof(ThreadPoolInfo));
     ThreadPoolInfo *infoArg = new (std::nothrow) ThreadPoolInfo;
     if (infoArg == nullptr) {
-      return -8;
+      return err_code_cm20;
     }
 
     memset(infoArg, 0, sizeof(ThreadPoolInfo));
@@ -1048,16 +982,27 @@ int cm20_receiver::recvFromSenderAndComputePSIOnce(conn *sock) {
   }
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      ">> cm20_receiver recv hash count:{}", count);
-
+  err_on_exit.dismiss();
   return 0;
 }
 
-int cm20_receiver::recvFromSenderAndComputePSIOnce_pir(conn *sock) {
-  // return this->lowL < this->senderSize ? 0 : 1;
+int cm20_receiver::recv_hash2_output_pir(conn *sock) {
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "cm20_receiver,recv_hash2_output_pir start ...");
+  string err_info = "error";
+  scope_guard err_on_exit([&]() {
+    SPDLOG_LOGGER_ERROR(spdlog::default_logger(),
+                        "cm20_receiver,recv_hash2_output_pir err_info:{}");
+    sock->close();
+  });
   int count = 0;
   for (;;) {
     if (this->_low_left >= this->_sender_size) break;
     string recvBuff = sock->recv();
+    if (recvBuff.empty()) {
+      err_info = "recv h2 data pir error";
+      return err_code_cm20;
+    }
     count++;
     auto up = this->_low_left + this->_bucket2_send_hash < this->_sender_size
                   ? this->_low_left + this->_bucket2_send_hash
@@ -1066,8 +1011,7 @@ int cm20_receiver::recvFromSenderAndComputePSIOnce_pir(conn *sock) {
     if (recvBufSize != (up - this->_low_left) * this->_h2_len_in_bytes) {
       return -122;
     }
-    // ThreadPoolInfo *infoArg = (ThreadPoolInfo
-    // *)malloc(sizeof(ThreadPoolInfo));
+
     ThreadPoolInfo *infoArg = new (std::nothrow) ThreadPoolInfo;
     if (infoArg == nullptr) {
       return -8;
@@ -1075,7 +1019,6 @@ int cm20_receiver::recvFromSenderAndComputePSIOnce_pir(conn *sock) {
 
     memset(infoArg, 0, sizeof(ThreadPoolInfo));
     // 赋值
-    //  infoArg->recvBuff = (u8_t *)malloc(recvBufSize);
     infoArg->recvBuff = new (std::nothrow) u8[recvBufSize];
     if (infoArg->recvBuff == nullptr) {
       return -8;
@@ -1092,7 +1035,7 @@ int cm20_receiver::recvFromSenderAndComputePSIOnce_pir(conn *sock) {
     infoArg->psiResultPirQuery =
         (vector<vector<u32>> *)(this->_psi_result_pir.data()) + this->_index_id;
 
-    // 赋值end
+    // 赋值 end
     this->_psi_result_index.emplace_back(this->_psi_compute_pool->enqueue(
         process_compute_psi_by_threadpool_pir, infoArg));
     this->_low_left += this->_bucket2_send_hash;
@@ -1100,13 +1043,14 @@ int cm20_receiver::recvFromSenderAndComputePSIOnce_pir(conn *sock) {
   }
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      ">> cm20_receiver recv hash count:{}", count);
-
+  err_on_exit.dismiss();
   return 0;
 }
 
-int cm20_receiver::getPsiResultsForAll(vector<u32> &psiResultsOutput) {
+int cm20_receiver::get_psi_results(vector<u32> &psiResultsOutput) {
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "cm20_receiver,get_psi_results start ...");
   u64 psiResultsSize = this->_psi_result_index.size();
-  //   printf("[cm20.cpp] psiResultsIndex size:%ld\n", psiResultsSize);
   for (u64 i = 0; i < psiResultsSize; i++) {
     u32 resultIndex = (this->_psi_result_index)[i].get();
     for (size_t j = 0; j < this->_psi_results[resultIndex].size(); j++) {
@@ -1116,20 +1060,17 @@ int cm20_receiver::getPsiResultsForAll(vector<u32> &psiResultsOutput) {
   return 0;
 }
 
-int cm20_receiver::getPsiResultsForAllPirQuery(
-    vector<vector<u32>> &psiResultsOutput) {
+int cm20_receiver::get_psi_results_pir(vector<vector<u32>> &psiResultsOutput) {
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "cm20_receiver,get_psi_results_pir start ...");
   u64 psiResultsSize = this->_psi_result_index.size();
-  //   printf("[cm20.cpp][pir-query] psiResultsIndex size:%ld\n",
-  //   psiResultsSize);
   for (u64 i = 0; i < psiResultsSize; i++) {
     u32 resultIndex = (this->_psi_result_index)[i].get();
     for (int j = 0; j < this->_psi_result_pir[resultIndex].size(); j++) {
       psiResultsOutput.emplace_back(this->_psi_result_pir[resultIndex][j]);
     }
   }
-  //   printf("[cm20.cpp][pir-query] psiResults in
-  //   getPsiResultsForAll,size:%ld\n",
-  //          psiResultsOutput.size());
+
   return 0;
 }
 ///////////////////////////////////////////////////////////////

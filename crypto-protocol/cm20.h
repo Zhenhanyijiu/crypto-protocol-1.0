@@ -40,14 +40,14 @@ class cm20_sender {
               int bucket2_send_hash = 256);
   int set_base_ot(const oc::BitVector &choice_ote,
                   const vector<oc::block> &m_gens);
-  int recoverMatrixC(conn *sock, vector<block> &senderSet);
-  int computeHashOutputToReceiverOnce(conn *sock);
+  int recover_matrix_c(conn *sock, vector<block> &sender_set);
+  int send_hash2_output(conn *sock);
   int get_count() {
     return (_sender_size + _bucket2_send_hash - 1) / _bucket2_send_hash;
   };
 };
-void transform_input_to_block(const vector<string> &dataSetInput,
-                              vector<block> &dataSetOutput, int threadNum);
+void transform_input_to_block(const vector<string> &data_set_input,
+                              vector<block> &data_set_output, int omp_num);
 ////////////////// cm20_receiver ///////////////////////
 class cm20_receiver {
  private:
@@ -76,6 +76,7 @@ class cm20_receiver {
   vector<vector<u32>> _psi_results;
   vector<vector<vector<u32>>> _psi_result_pir;
   std::vector<std::future<u32>> _psi_result_index;
+  int gen_hash_map();
 
  public:
   ~cm20_receiver();
@@ -84,15 +85,11 @@ class cm20_receiver {
                 int mat_width, int log_height, int omp_num = 1,
                 int h2_len_in_bytes = 10, int bucket2_send_hash = 256);
   int set_base_ot(const vector<array<block, 2>> &m_gens_pair);
-  int getSendMatrixADBuff(conn *sock, vector<block> &receiverSet);
-
-  int genenateAllHashesMap();
-
-  int recvFromSenderAndComputePSIOnce(conn *sock);
-  int recvFromSenderAndComputePSIOnce_pir(conn *sock);
-  int getPsiResultsForAll(vector<u32> &psiResultsOutput);
-  int getPsiResultsForAllPirQuery(vector<vector<u32>> &psiResultsOutput);
-
+  int gen_matrix_u_a_d(conn *sock, vector<block> &receiverSet);
+  int recv_hash2_output(conn *sock);
+  int recv_hash2_output_pir(conn *sock);
+  int get_psi_results(vector<u32> &result_output);
+  int get_psi_results_pir(vector<vector<u32>> &result_output);
   int get_count() {
     return (_sender_size + _bucket2_send_hash - 1) / _bucket2_send_hash;
   };
