@@ -32,9 +32,9 @@ void get_data(vector<block> &senderSet, vector<block> &recverSet) {
 }
 static void run_cm20_sender(vector<block> &senderSet) {
   connection c(1, "127.0.0.1", 9300);
-  cm20_sender cm20sender((oc::u8 *)(default_param.common_seed.data()),
-                         default_param.sender_size, default_param.matrix_width,
-                         default_param.logHeight, default_param.threadNum,
+  cm20_sender cm20sender(default_param.common_seed, default_param.sender_size,
+                         default_param.matrix_width, default_param.logHeight,
+                         default_param.threadNum,
                          default_param.hash2LengthInBytes,
                          default_param.bucket2ForComputeH2Output);
   cm20sender.recoverMatrixC(&c, senderSet);
@@ -48,12 +48,11 @@ static void run_cm20_sender(vector<block> &senderSet) {
 static void run_cm20_recver(vector<block> &recverSet) {
   connection c(0, "127.0.0.1", 9300);
   auto receiverSize = recverSet.size();
-  cm20_receiver cm20recver(&c, (oc::u8 *)(default_param.common_seed.data()),
-                           receiverSize, default_param.sender_size,
-                           default_param.matrix_width, default_param.logHeight,
-                           default_param.threadNum,
-                           default_param.hash2LengthInBytes,
-                           default_param.bucket2ForComputeH2Output);
+  cm20_receiver cm20recver(
+      default_param.common_seed, receiverSize, default_param.sender_size,
+      default_param.matrix_width, default_param.logHeight,
+      default_param.threadNum, default_param.hash2LengthInBytes,
+      default_param.bucket2ForComputeH2Output);
   cm20recver.getSendMatrixADBuff(&c, recverSet);
   //   cout << "============== 3" << endl;
   cm20recver.genenateAllHashesMap();
@@ -88,9 +87,9 @@ static void test_cm20_psi() {
 // pir
 static void run_cm20_sender_pir(vector<block> &senderSet) {
   connection c(1, "127.0.0.1", 9300);
-  cm20_sender cm20sender((oc::u8 *)(default_param.common_seed.data()),
-                         default_param.sender_size, default_param.matrix_width,
-                         default_param.logHeight, default_param.threadNum,
+  cm20_sender cm20sender(default_param.common_seed, default_param.sender_size,
+                         default_param.matrix_width, default_param.logHeight,
+                         default_param.threadNum,
                          default_param.hash2LengthInBytes,
                          default_param.bucket2ForComputeH2Output);
   cm20sender.recoverMatrixC(&c, senderSet);
@@ -102,12 +101,11 @@ static void run_cm20_sender_pir(vector<block> &senderSet) {
 static void run_cm20_recver_pir(vector<block> &recverSet) {
   connection c(0, "127.0.0.1", 9300);
   auto receiverSize = recverSet.size();
-  cm20_receiver cm20recver(&c, (oc::u8 *)(default_param.common_seed.data()),
-                           receiverSize, default_param.sender_size,
-                           default_param.matrix_width, default_param.logHeight,
-                           default_param.threadNum,
-                           default_param.hash2LengthInBytes,
-                           default_param.bucket2ForComputeH2Output);
+  cm20_receiver cm20recver(
+      default_param.common_seed, receiverSize, default_param.sender_size,
+      default_param.matrix_width, default_param.logHeight,
+      default_param.threadNum, default_param.hash2LengthInBytes,
+      default_param.bucket2ForComputeH2Output);
   cm20recver.getSendMatrixADBuff(&c, recverSet);
   cout << "============== 3" << endl;
   cm20recver.genenateAllHashesMap();
