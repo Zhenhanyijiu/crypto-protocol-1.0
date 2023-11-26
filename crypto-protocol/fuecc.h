@@ -1,6 +1,7 @@
 #ifndef __FU_ECC_INTERFACE_H__
 #define __FU_ECC_INTERFACE_H__
 #include <bits/stdc++.h>
+#include "crypto-protocol/config.h"
 namespace fucrypto {
 // 先定义 3 个
 class bigint {
@@ -79,15 +80,15 @@ class curve {
   virtual bool is_at_infinity(const point* p) = 0;
   virtual bool set_to_infinity(point* p) = 0;
 };
+std::unique_ptr<curve> new_lib_curve(const config_param& param);
+// class EccLibFactory {
+//  private:
+//   std::string _ecc_lib_list[512] = {"openssl", "relic"};
 
-class EccLibFactory {
- private:
-  std::string _ecc_lib_list[512] = {"openssl", "relic"};
-
- public:
-  virtual ~EccLibFactory() { printf("[info]~EccLibFactory free\n"); };
-  virtual std::unique_ptr<curve> new_curve(std::string curve_name) = 0;
-};
-extern std::unordered_map<std::string, EccLibFactory*>* ecc_lib_map;
+//  public:
+//   virtual ~EccLibFactory() { printf("[info]~EccLibFactory free\n"); };
+//   virtual std::unique_ptr<curve> new_curve(std::string curve_name) = 0;
+// };
+// extern std::unordered_map<std::string, EccLibFactory*>* ecc_lib_map;
 }  // namespace fucrypto
 #endif

@@ -47,14 +47,15 @@ void np99sender::_np99sender(const config_param& param) {
   string ecc_lib_name = param.ecc_lib_name;
   string hasher_name = param.hasher_name;
   string curve_name = param.curve_name;
-  auto isok = ecc_lib_map->find(ecc_lib_name);
-  if (isok == ecc_lib_map->end())
-    ecc_lib_name = default_config_param.ecc_lib_name;
-  auto isok2 = (*hasher_map_ptr).find(hasher_name);
-  if (isok2 == hasher_map_ptr->end())
-    hasher_name = default_config_param.hasher_name;
-  _ecc = move((*ecc_lib_map)[ecc_lib_name]->new_curve(curve_name));
-  _hash = move((*hasher_map_ptr)[hasher_name]());
+  //   auto isok = ecc_lib_map->find(ecc_lib_name);
+  //   if (isok == ecc_lib_map->end())
+  //     ecc_lib_name = default_config_param.ecc_lib_name;
+  //   auto isok2 = (*hasher_map_ptr).find(hasher_name);
+  //   if (isok2 == hasher_map_ptr->end())
+  //     hasher_name = default_config_param.hasher_name;
+  //   _ecc = move((*ecc_lib_map)[ecc_lib_name]->new_curve(curve_name));
+  _ecc = new_lib_curve(param);
+  _hash = new_hasher(param);
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      ">> np99sender hasher:{},ecclib:{},curve_name:{}",
                      hasher_name, ecc_lib_name, curve_name);
@@ -176,14 +177,15 @@ void np99receiver::_np99receiver(const config_param& param) {
   string ecc_lib_name = param.ecc_lib_name;
   string hasher_name = param.hasher_name;
   string curve_name = param.curve_name;
-  auto isok = ecc_lib_map->find(ecc_lib_name);
-  if (isok == ecc_lib_map->end())
-    ecc_lib_name = default_config_param.ecc_lib_name;
-  auto isok2 = (*hasher_map_ptr).find(hasher_name);
-  if (isok2 == hasher_map_ptr->end())
-    hasher_name = default_config_param.hasher_name;
-  _ecc = move((*ecc_lib_map)[ecc_lib_name]->new_curve(curve_name));
-  _hash = move((*hasher_map_ptr)[hasher_name]());
+  //   auto isok = ecc_lib_map->find(ecc_lib_name);
+  //   if (isok == ecc_lib_map->end())
+  //     ecc_lib_name = default_config_param.ecc_lib_name;
+  //   auto isok2 = (*hasher_map_ptr).find(hasher_name);
+  //   if (isok2 == hasher_map_ptr->end())
+  //     hasher_name = default_config_param.hasher_name;
+  //   _ecc = move((*ecc_lib_map)[ecc_lib_name]->new_curve(curve_name));
+  _ecc = new_lib_curve(param);
+  _hash = new_hasher(param);
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      ">> np99receiver hasher:{},ecclib:{},curve_name:{}",
                      hasher_name, ecc_lib_name, curve_name);

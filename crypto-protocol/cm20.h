@@ -1,5 +1,6 @@
 #ifndef __FU_CM20_H__
 #define __FU_CM20_H__
+#include "crypto-protocol/config.h"
 #include "crypto-protocol/fusocket.h"
 #include "crypto-protocol/threadpool.h"
 #include "cryptoTools/Common/Defines.h"
@@ -31,6 +32,7 @@ class cm20_sender {
   vector<vector<oc::u8>> _trans_hash_inputs;
   vector<vector<oc::u8>> _hash_inputs;
   oc::u64 _low_left;
+  config_param _conf;
 
  public:
   ~cm20_sender();

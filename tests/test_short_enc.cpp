@@ -25,7 +25,9 @@ int main_test(argv_param& param) {
                      "====== test short elgamal enc ======");
   int max_msg_n = param.max_msg_n;
   int plain_num = param.plain_num;
-  auto c = (*ecc_lib_map)["openssl"]->new_curve("secp256k1");
+  //   auto c = (*ecc_lib_map)["openssl"]->new_curve("secp256k1");
+  config_param defau;
+  auto c = new_lib_curve(defau);
   if (!c) return 0;
   time_point tm_point;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
@@ -110,7 +112,9 @@ int main_test_enc_list_cipher_add(argv_param& param) {
   int max_msg_n = param.max_msg_n;
   int plain_num = param.plain_num;
   int plain_cipher_vector_num = param.plain_cipher_vector_num;
-  auto c = (*ecc_lib_map)["openssl"]->new_curve("secp256k1");
+  //   auto c = (*ecc_lib_map)["openssl"]->new_curve("secp256k1");
+  config_param defau;
+  auto c = new_lib_curve(defau);
   if (!c) return 0;
   time_point tm_point;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
@@ -191,7 +195,9 @@ int main_test_enc_dec_batch(argv_param& param) {
   int max_msg_n = param.max_msg_n;
   int plain_num = param.plain_num;
   //   int plain_cipher_vector_num = param.plain_cipher_vector_num;
-  auto c = (*ecc_lib_map)["openssl"]->new_curve("secp256k1");
+  //   auto c = (*ecc_lib_map)["openssl"]->new_curve("secp256k1");
+  config_param defau;
+  auto c = new_lib_curve(defau);
   if (!c) return 0;
   time_point tm_point;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
@@ -246,7 +252,9 @@ int main_test_enc_dec_batch_pre_c0(argv_param& param) {
   int max_msg_n = param.max_msg_n;
   int plain_num = param.plain_num;
   //   int plain_cipher_vector_num = param.plain_cipher_vector_num;
-  auto c = (*ecc_lib_map)["openssl"]->new_curve("secp256k1");
+  //   auto c = (*ecc_lib_map)["openssl"]->new_curve("secp256k1");
+  config_param defau;
+  auto c = new_lib_curve(defau);
   if (!c) return 0;
   time_point tm_point;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
@@ -328,7 +336,9 @@ int main_test_batch_cipher_add_pre_c0(argv_param& param) {
   int max_msg_n = param.max_msg_n;
   int plain_num = param.plain_num;
   int plain_cipher_vector_num = param.plain_cipher_vector_num;
-  auto c = (*ecc_lib_map)["openssl"]->new_curve("secp256k1");
+  //   auto c = (*ecc_lib_map)["openssl"]->new_curve("secp256k1");
+  config_param defau;
+  auto c = new_lib_curve(defau);
   if (!c) return 0;
   time_point tm_point;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),

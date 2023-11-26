@@ -235,8 +235,11 @@ void test_curve_openssl_factory(string curve_name) {
   cout << endl;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "========= test_curve_openssl_factory");
-  EccLibFactory* openssl = (*ecc_lib_map)["openssl"];
-  auto cv = openssl->new_curve(curve_name);
+  //   EccLibFactory* openssl = (*ecc_lib_map)["openssl"];
+  //   auto cv = new_openssl_curve(curve_name);
+  config_param param;
+  param.curve_name = curve_name;
+  auto cv = new_lib_curve(param);
   auto bn1 = cv->gen_rand_bn();
   bn1->print();
   auto bn2 = cv->new_bn();
@@ -268,8 +271,11 @@ void test_curve_open_point_2hex(string curve_name) {
   cout << endl;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "========= test_curve_open_point_2hex");
-  EccLibFactory* openssl = (*ecc_lib_map)["openssl"];
-  auto cv = openssl->new_curve(curve_name);
+  //   EccLibFactory* openssl = (*ecc_lib_map)["openssl"];
+  //   auto cv = new_openssl_curve(curve_name);
+  config_param param;
+  param.curve_name = curve_name;
+  auto cv = new_lib_curve(param);
   auto bn1 = cv->new_bn();
   bn1->from_dec("11111");
   bn1->print();
@@ -290,8 +296,10 @@ void test_curve_open_point_2bn(string curve_name) {
   cout << endl;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "========= test_curve_open_point_2bn");
-  EccLibFactory* openssl = (*ecc_lib_map)["openssl"];
-  auto cv = openssl->new_curve(curve_name);
+  //   EccLibFactory* openssl = (*ecc_lib_map)["openssl"];
+  config_param param;
+  param.curve_name = curve_name;
+  auto cv = new_lib_curve(param);
   auto bn1 = cv->new_bn();
   bn1->from_dec("11111");
   bn1->print();

@@ -56,7 +56,7 @@ spdlog_dep = dependency('spdlog')
 cereal_dep = dependency('cereal')
 # gmp_dep = dependency('gmp')
 # boost_dep = dependency('boost', modules: ['serialization']) # 系统路径找, vcpkg安装这里用不了
-# botan_dep = dependency('botan-2')
+botan_dep = dependency('botan-2')
 # ntl_dep = dependency('ntl') # 自定义的pc文件 /root/vcpkg/installed/x64-linux/lib/pkgconfig/ntl.pc
 # coproto_dep = dependency('coproto')
 
@@ -69,7 +69,7 @@ crypto_dependencies += spdlog_dep
 crypto_dependencies += cereal_dep
 # crypto_dependencies += gmp_dep
 # crypto_dependencies += boost_dep
-# crypto_dependencies += botan_dep
+crypto_dependencies += botan_dep
 # crypto_dependencies += ntl_dep
 # crypto_dependencies += coproto_dep
 

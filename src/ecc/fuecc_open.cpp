@@ -311,17 +311,18 @@ bool open_curve::set_to_infinity(point* p) {
   return fg ? true : false;
 };
 /****************** open_ecc_curve end *******************/
-class openssl_factory : public EccLibFactory {
- private:
-  /* data */
- public:
-  openssl_factory(){};
-  ~openssl_factory() { cout << "[info]~openssl_factory" << endl; };
-  std::unique_ptr<curve> new_curve(std::string curve_name) {
-    return make_unique<open_curve>(curve_name);
-  };
-};
-openssl_factory openssl_lib_factory;
+// class openssl_factory : public EccLibFactory {
+//  private:
+//   /* data */
+//  public:
+//   openssl_factory(){};
+//   ~openssl_factory() { cout << "[info]~openssl_factory" << endl; };
+//   std::unique_ptr<curve> new_curve(std::string curve_name) {
+//     return make_unique<open_curve>(curve_name);
+//   };
+// };
+// openssl_factory openssl_lib_factory;
 // EccLibFactory* get_openssl_factory_ptr() { return new openssl_factory; };
-EccLibFactory* openssl_factory_ptr = &openssl_lib_factory;
+// EccLibFactory* openssl_factory_ptr = &openssl_lib_factory;
+
 }  // namespace fucrypto

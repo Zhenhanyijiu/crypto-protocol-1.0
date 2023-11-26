@@ -338,7 +338,8 @@ int cm20_sender::send_hash2_output(conn *sock) {
                    ? this->_low_left + this->_bucket2_send_hash
                    : this->_sender_size;
     //   ROracle ro;
-    auto ro = (*hasher_map_ptr)["sha256"]();
+    // auto ro = (*hasher_map_ptr)["sha256"]();
+    auto ro = new_hasher(_conf);
     char hashOutput[32];
     for (auto j = this->_low_left; j < upR; ++j) {
       memset(this->_hash_inputs[j - this->_low_left].data(), 0,
@@ -752,12 +753,14 @@ typedef struct HashMapParallelInfo {
   u64 bucket2ForComputeH2Output;
   vector<u8> *transHashInputsPtr;
   unordered_map<u64, std::vector<std::pair<block, u32>>> *hashMap;
+  config_param param;
 } HashMapParallelInfo;
 // 并行生成hashmap 处理函数
 void process_for_hash_map(HashMapParallelInfo *infoArg) {
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "cm20_receiver,process_for_hash_map");
-  auto ro = (*hasher_map_ptr)["sha256"]();
+  //   auto ro = (*hasher_map_ptr)["sha256"]();
+  auto ro = new_hasher(infoArg->param);
 
   char hashOutput[32];
 
@@ -1083,11 +1086,13 @@ typedef struct HashOneInfo {
   block *aesInputStart;
   block *dataSetOutputStart;
   string *dataSetInputStart;
+  config_param param;
 } HashOneInfo;
 // 用omp并行指令，加速Hash1的计算，在使用
 void process_char_to_block_omp(HashOneInfo *info) {
   char h1Output[32];
-  auto ro = (*hasher_map_ptr)["sha256"]();
+  //   auto ro = (*hasher_map_ptr)["sha256"]();
+  auto ro = new_hasher(info->param);
   //   ROracle ro;
   for (u64 i = 0; i < info->processNum; ++i) {
     // 256个元素

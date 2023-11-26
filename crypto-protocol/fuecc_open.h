@@ -81,7 +81,7 @@ class open_curve : public curve {
   bool is_at_infinity(const point* p);
   bool set_to_infinity(point* p);
 };
-extern EccLibFactory* openssl_factory_ptr;
+// extern EccLibFactory* openssl_factory_ptr;
 // EccLibFactory* get_openssl_factory_ptr();
 }  // namespace fucrypto
 
