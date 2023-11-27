@@ -69,8 +69,6 @@ bool botan_bn::from_dec(std::string dec) {
   return 1;
 }
 int botan_bn::cmp(const bigint* a) {
-  // returns -1 if a < b, 0 if a == b and 1 if a > b
-  //   return BN_cmp(ptr(a->_n), ptr(b->_n));
   botan_bn* a_bn = (botan_bn*)a;
   return _bn.cmp(a_bn->_bn);
 }
@@ -97,12 +95,10 @@ botan_point::botan_point(const curve* c) {
   _p = _botan_c->_ec_group.zero_point();
 };
 botan_point::~botan_point() {
-  //   if (_p) EC_POINT_free(_p);
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "~botan_point free");
 };
 std::string botan_point::to_bin() {
   auto ret = _p.encode(PointGFp::COMPRESSED);
-  //   auto ret = EC2OSP(_p, PointGFp::COMPRESSED);
   return string((char*)ret.data(), ret.size());
 };
 std::string botan_point::to_hex() {
@@ -119,11 +115,7 @@ std::unique_ptr<bigint> botan_point::to_bn() {
   return ret;
 }
 bool botan_point::from_bin(const char* bin, int len) {
-  //   vector<uint8_t> bin_vec(len);
-  //   memcpy(bin_vec.data(), bin, len);
-  //   _p = OS2ECP(bin, len, _botan_c->_ec_group);
   _p = _botan_c->_ec_group.OS2ECP((uint8_t*)bin, len);
-  //   bool fg = _p.on_the_curve();
   return _p.on_the_curve();
 };
 bool botan_point::from_hex(const char* hex) {
@@ -160,13 +152,8 @@ void botan_point::print() {
 // };
 botan_curve::botan_curve(string curve_name) : curve(curve_name) {
   _rng = make_unique<AutoSeeded_RNG>();
-  //   auto is_find = curve_map.find(_curve_name);
-  //   if (is_find == curve_map.end()) _curve_name = "secp256k1";
   _ec_group = EC_Group(_curve_name);
   auto G = _ec_group.get_base_point();
-  //   BIGNUM* bn = BN_CTX_get(_bn_ctx);
-  //   const EC_POINT* G_1 = EC_GROUP_get0_generator(_ec_group);
-  //   const EC_POINT* G_2 = EC_GROUP_get0_generator(_ec_group);
   auto x = G.get_affine_x();
   auto y = G.get_affine_y();
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
@@ -174,22 +161,15 @@ botan_curve::botan_curve(string curve_name) : curve(curve_name) {
                      x.to_hex_string(), y.to_hex_string());
 };
 botan_curve::~botan_curve() {
-  //   if (_ec_group) EC_GROUP_free(_ec_group);
-  //   if (_bn_ctx) BN_CTX_free(_bn_ctx);
-  //   if (_order) BN_free(_order);
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "~botan_curve free");
 };
 std::unique_ptr<bigint> botan_curve::gen_rand_bn() {
   auto bn = make_unique<botan_bn>();
-  //   int fg = BN_rand_range(ptr(bn->_n), _order);
-  //   if (fg) return bn;
-  //   return nullptr;
   if (!bn) return bn;
   bn->_bn = _ec_group.random_scalar(*_rng);
   return bn;
 };
 bool botan_curve::gen_rand_bn(bigint* bn) {
-  // return BN_rand_range(ptr(bn->_n), _order);
   botan_bn* bn_ = (botan_bn*)bn;
   if (!bn_) return false;
   bn_->_bn = _ec_group.random_scalar(*_rng);
@@ -201,13 +181,11 @@ std::unique_ptr<bigint> botan_curve::new_bn() {
 std::unique_ptr<point> botan_curve::new_point() {
   auto ret = make_unique<botan_point>(this);
   if (!ret) return ret;
-  //   ret->_p = _ec_group.zero_point();
   return ret;
 };
 bool botan_curve::is_on_curve(const point* p) {
   auto pt = (botan_point*)p;
   return pt->_p.on_the_curve();
-  //   return EC_POINT_is_on_curve(_ec_group, pt->_p, _bn_ctx);
 };
 bool botan_curve::add(const point* p1, const point* p2, point* ret) {
   auto p_a = (botan_point*)p1;
@@ -219,7 +197,6 @@ bool botan_curve::add(const point* p1, const point* p2, point* ret) {
 bool botan_curve::add(const point* p1, point* p2) {
   auto p_a = (botan_point*)p1;
   auto p_b = (botan_point*)p2;
-  //   return EC_POINT_add(_ec_group, p_b->_p, p_a->_p, p_b->_p, _bn_ctx);
   p_b->_p = p_a->_p + p_b->_p;
   return true;
 };
@@ -227,13 +204,7 @@ bool botan_curve::add(const point* p1, point* p2) {
 bool botan_curve::scalar_mul(const bigint* bn, point* p1) {
   auto p_a = (botan_point*)p1;
   auto bn_ = (botan_bn*)bn;
-  //   int res =
-  //       EC_POINT_mul(_ec_group, p_a->_p, NULL, p_a->_p, ptr(bn->_n),
-  //       _bn_ctx);
-  //   return res;
   p_a->_p = bn_->_bn * p_a->_p;
-  //   BigInt zero("0");
-  //   p_a->_p = _ec_group.point_multiply(zero, p_a->_p, bn_->_bn);
   return true;
 };
 bool botan_curve::scalar_mul(const bigint* bn, const point* p1, point* p2) {
