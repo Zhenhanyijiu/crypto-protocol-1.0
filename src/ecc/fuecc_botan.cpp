@@ -29,15 +29,9 @@ static string get_bin_stream(const char* bg, int len) {
   return string(ss);
 }
 botan_bn::botan_bn() { _bn = BigInt("0"); };
-botan_bn::botan_bn(botan_bn&& n) {
-  _bn = n._bn;
-  //   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "botan_bn 移动构造:{:p}",
-  //   _n);
-}
+botan_bn::botan_bn(botan_bn&& n) { _bn = n._bn; }
 botan_bn& botan_bn::operator=(botan_bn&& n) {
   _bn = n._bn;
-  //   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "botan_bn 移动赋值:{:p}",
-  //   _n);
   return *this;
 }
 botan_bn::~botan_bn() {
@@ -52,7 +46,6 @@ int botan_bn::set_zero() {
   return 1;
 }
 int botan_bn::set_long(long a) {
-  //   return BN_set_word(ptr(_n), (BN_ULONG)a);
   _bn.set_word_at(0, a);
   return 1;
 }
@@ -68,7 +61,6 @@ bool botan_bn::from_bin(const char* bin, int len) {
   return 1;
 }
 bool botan_bn::from_hex(std::string hex) {
-  //   return BN_hex2bn((BIGNUM**)&_n, hex.c_str());
   _bn = _bn.decode((uint8_t*)hex.data(), hex.size(), BigInt::Base::Hexadecimal);
   return 1;
 }

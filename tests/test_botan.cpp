@@ -241,6 +241,61 @@ void test_botan_scalar_inv(const config_param& conf) {
   p3->print();
   p4->print();
 }
+void test_bench_mul_little(const config_param& conf) {
+  time_point tp;
+  auto c = new_lib_curve(conf);
+  //   auto k1 = c->gen_rand_bn();
+  auto k1 = c->new_bn();
+  k1->from_dec("1");
+  auto p1 = c->new_point();
+  auto G = c->get_generator();
+  for (size_t i = 0; i < 20000; i++) {
+    c->scalar_mul(k1.get(), G.get(), p1.get());
+  }
+  cout << "======== test_bench_mul_little little k use time:"
+       << tp.get_time_piont_ms() << " ms" << endl;
+}
+void test_bench_mul_big(const config_param& conf) {
+  time_point tp;
+  auto c = new_lib_curve(conf);
+  auto k1 = c->gen_rand_bn();
+  k1->print();
+  //   auto k1 = c->new_bn();
+  k1->from_dec(
+      "113873244849146753239066719301511572321549855000129812990552382434725991"
+      "349921");
+  auto p1 = c->new_point();
+  auto G = c->get_generator();
+  for (size_t i = 0; i < 20000; i++) {
+    c->scalar_mul(k1.get(), G.get(), p1.get());
+  }
+  cout << "======== test_bench_mul_big big k use time:"
+       << tp.get_time_piont_ms() << " ms" << endl;
+}
+
+void test_botan_point_encode(const config_param& conf) {
+  cout << endl;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "=== test_botan_point_encode ===");
+  time_point tp;
+  auto c = new_lib_curve(conf);
+  auto k1 = c->gen_rand_bn();
+  //   auto k1 = c->new_bn();
+  k1->from_dec(
+      "113873244849146753239066719301511572321549855000129812990552382434725991"
+      "349921");
+  k1->print();
+
+  auto p1 = c->new_point();
+  auto p2 = c->new_point();
+  auto G = c->get_generator();
+  c->scalar_mul(k1.get(), G.get(), p1.get());
+  p1->print();
+  string bin_s = p1->to_bin();
+  bool fg = p2->from_bin(bin_s.data(), bin_s.size());
+  assert(fg);
+  p2->print();
+}
 int main(int argc, char** argv) {
   spdlog_set_level("info");
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "=== test botan ===");
@@ -258,5 +313,17 @@ int main(int argc, char** argv) {
   test_botan_curve_add(conf);
   test_botan_scalar_mul(conf);
   test_botan_scalar_inv(conf);
+
+  //
+  test_bench_mul_little(conf);
+  conf.ecc_lib_name = "openssl";
+  test_bench_mul_little(conf);
+  conf.ecc_lib_name = "botan";
+  test_bench_mul_big(conf);
+  conf.ecc_lib_name = "openssl";
+  test_bench_mul_big(conf);
+  //
+  test_botan_point_encode(conf);
+
   return 0;
 }
