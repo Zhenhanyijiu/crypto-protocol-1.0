@@ -26,6 +26,7 @@ class open_bn : public bigint {
   bool from_hex(std::string hex) override;
   bool from_dec(std::string dec) override;
   int cmp(const bigint* a, const bigint* b);
+  int cmp(const bigint* a);
   void print();
 };
 class open_curve;

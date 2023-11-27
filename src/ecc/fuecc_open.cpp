@@ -89,6 +89,7 @@ int open_bn::cmp(const bigint* a, const bigint* b) {
   // returns -1 if a < b, 0 if a == b and 1 if a > b
   return BN_cmp(ptr(a->_n), ptr(b->_n));
 }
+int open_bn::cmp(const bigint* a) { return BN_cmp(ptr(a->_n), ptr(_n)); }
 void open_bn::print() {
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "bn address:{:p}", _n);
   //   cout << hex << "bn address:" << (uint64_t)n << endl;

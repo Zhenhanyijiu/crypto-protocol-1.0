@@ -16,6 +16,7 @@ source_files = files(
   'hash/hasherimpl.cpp',
   'hash/hasher.cpp',  
   'ecc/fuecc_open.cpp',  
+  'ecc/fuecc_botan.cpp',  
   'ecc/fuecc.cpp',
   'ot/ot_base.cpp',
   'ot/ot_iknp.cpp',  

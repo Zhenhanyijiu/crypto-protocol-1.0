@@ -19,7 +19,8 @@ class bigint {
   virtual bool from_bin(const char* bin, int len) = 0;
   virtual bool from_hex(std::string hex) = 0;
   virtual bool from_dec(std::string dec) = 0;
-  virtual int cmp(const bigint* a, const bigint* b) = 0;
+  //   virtual int cmp(const bigint* a, const bigint* b) = 0;
+  virtual int cmp(const bigint* a) = 0;
   virtual void print() = 0;
 
   //   virtual
