@@ -53,9 +53,10 @@ int open_bn::set_one() { return BN_one(ptr(_n)); }
 int open_bn::set_zero() { return BN_zero(ptr(_n)); }
 int open_bn::set_long(long a) { return BN_set_word(ptr(_n), (BN_ULONG)a); }
 std::string open_bn::to_bin() {
-  unsigned char to[512];
-  int n_bytes = BN_bn2bin(ptr(_n), to);
-  return string((char*)to, n_bytes);
+  unsigned char to[1024] = {0};
+  int n_bytes = BN_bn2bin(ptr(_n), to + 1);
+  if (BN_is_negative(ptr(_n))) to[0] = 1;
+  return string((char*)to, n_bytes + 1);
 }
 std::string open_bn::to_hex() {
   char* s = BN_bn2hex(ptr(_n));
@@ -73,11 +74,13 @@ std::string open_bn::to_dec() {
 }
 bool open_bn::from_bin(const char* bin, int len) {
   //   printf("===1 n_ptr:%p\n", _n);
-  auto res = BN_bin2bn((unsigned char*)bin, len, ptr(_n));
-  if (!res) return 0;
+  if (len <= 0) return false;
+  auto res = BN_bin2bn((unsigned char*)(bin + 1), len - 1, ptr(_n));
+  if (!res) return false;
   if (!_n) _n = res;
+  BN_set_negative(ptr(_n), bin[0]);
   //   printf("===2 res:%p,_n:%p\n", res, ptr(_n));
-  return 1;
+  return true;
 }
 bool open_bn::from_hex(std::string hex) {
   return BN_hex2bn((BIGNUM**)&_n, hex.c_str());

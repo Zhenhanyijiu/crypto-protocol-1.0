@@ -50,8 +50,9 @@ int botan_bn::set_long(long a) {
   return 1;
 }
 std::string botan_bn::to_bin() {
-  string ret(_bn.bytes(), '\0');
-  _bn.binary_encode((uint8_t*)ret.data());
+  string ret(_bn.bytes() + 1, '\0');
+  _bn.binary_encode((uint8_t*)ret.data() + 1);
+  if (_bn.sign() == 1) ret[0] = 1;
   return ret;
 }
 std::string botan_bn::to_hex() {
@@ -65,8 +66,12 @@ std::string botan_bn::to_dec() {
   return ret;
 }
 bool botan_bn::from_bin(const char* bin, int len) {
-  _bn.binary_decode((uint8_t*)bin, len);
-  return 1;
+  if (len > 0) {
+    _bn.binary_decode((uint8_t*)(bin + 1), len - 1);
+    if (bin[0] == '\0') _bn.set_sign(_bn.Sign::Negative);
+    return 1;
+  }
+  return false;
 }
 bool botan_bn::from_hex(std::string hex) {
   int offset = 0;

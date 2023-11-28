@@ -349,6 +349,32 @@ void test_bigint(const config_param& conf2) {
   cout << "========= -afde2a =========" << endl;
   b1->from_hex("-afde2a");
   b1->print();
+  auto b2 = c->new_bn();
+  string bin1 = b1->to_bin();
+  b2->from_bin(bin1.data(), bin1.size());
+  b2->print();
+  assert(b2->cmp(b1.get()) == 0);
+}
+
+void test_bigint_mul(const config_param& conf2) {
+  cout << endl;
+  auto conf = conf2;
+  conf.ecc_lib_name = "botan";
+  conf.ecc_lib_name = "openssl";
+  auto c = new_lib_curve(conf);
+  auto k1 = c->gen_rand_bn();
+  k1->from_dec("-1");
+  auto G = c->get_generator();
+  auto G_1 = c->new_point();
+  bool fg = c->scalar_base_mul(k1.get(), G_1.get());
+  assert(fg);
+  fg = c->inv(G.get());
+  assert(fg);
+  assert(c->equal(G_1.get(), G.get()));
+  G->print();
+  G_1->print();
+  c->gen_rand_bn(k1.get());
+  k1->print();
 }
 int main(int argc, char** argv) {
   spdlog_set_level("info");
@@ -380,5 +406,6 @@ int main(int argc, char** argv) {
   test_botan_point_encode(conf);
   test_base64(conf);
   test_bigint(conf);
+  test_bigint_mul(conf);
   return 0;
 }
