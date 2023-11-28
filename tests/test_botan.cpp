@@ -1,5 +1,6 @@
 #include <bits/stdc++.h>
 #include <botan/bigint.h>
+#include <botan/base64.h>
 #include "crypto-protocol/utils.h"
 #include "crypto-protocol/fulog.h"
 #include "crypto-protocol/fuecc_botan.h"
@@ -249,7 +250,7 @@ void test_bench_mul_little(const config_param& conf) {
   k1->from_dec("1");
   auto p1 = c->new_point();
   auto G = c->get_generator();
-  for (size_t i = 0; i < 20000; i++) {
+  for (size_t i = 0; i < 200; i++) {
     c->scalar_mul(k1.get(), G.get(), p1.get());
   }
   cout << "======== test_bench_mul_little little k use time:"
@@ -266,7 +267,7 @@ void test_bench_mul_big(const config_param& conf) {
       "349921");
   auto p1 = c->new_point();
   auto G = c->get_generator();
-  for (size_t i = 0; i < 20000; i++) {
+  for (size_t i = 0; i < 200; i++) {
     c->scalar_mul(k1.get(), G.get(), p1.get());
   }
   cout << "======== test_bench_mul_big big k use time:"
@@ -296,6 +297,59 @@ void test_botan_point_encode(const config_param& conf) {
   assert(fg);
   p2->print();
 }
+void test_base64(const config_param& conf) {
+  cout << endl;
+  auto c = new_lib_curve(conf);
+  auto k1 = c->gen_rand_bn();
+  string bin_ = k1->to_bin();
+  cout << "bin_ size:" << bin_.size() << endl;
+  string ret = base64_encode((uint8_t*)bin_.data(), bin_.size());
+  cout << "base64:" << ret << ",len:" << ret.size() << endl;
+}
+using namespace Botan;
+void test_bigint(const config_param& conf2) {
+  cout << endl;
+  auto conf = conf2;
+  conf.ecc_lib_name = "botan";
+  auto c = new_lib_curve(conf);
+  auto k1 = c->gen_rand_bn();
+  string bin_ = k1->to_bin();
+  cout << "bin_ size:" << bin_.size() << endl;
+  k1->print();
+  k1->from_dec("10000");
+  string s10 = k1->to_dec();
+  k1->print();
+  auto k2 = c->new_bn();
+  k2->from_dec(s10);
+  bool fg = k2->cmp(k1.get());
+  assert(fg == 0);
+  cout << boolalpha << "fg:" << fg << endl;
+  //   BigInt B("-1");
+  //   BigInt B("0xf");
+  //   //   B.set_sign(B.Sign::Negative);
+  //   //   auto xx = B.reverse_sign();
+  //   auto xx = B.sign();
+  //   cout << "-1 dec:" << B.to_dec_string() << endl;
+  //   cout << "-1 hex:" << B.to_hex_string() << endl;
+  //   cout << "sign :" << xx << endl;
+
+  cout << "========= 65517 =========" << endl;
+  auto b1 = c->new_bn();
+  b1->from_dec("65517");
+  b1->print();
+
+  cout << "========= -65517 =========" << endl;
+  b1->from_dec("-65517");
+  b1->print();
+
+  cout << "========= afde2a =========" << endl;
+  b1->from_hex("afde2a");
+  b1->print();
+
+  cout << "========= -afde2a =========" << endl;
+  b1->from_hex("-afde2a");
+  b1->print();
+}
 int main(int argc, char** argv) {
   spdlog_set_level("info");
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "=== test botan ===");
@@ -324,6 +378,7 @@ int main(int argc, char** argv) {
   test_bench_mul_big(conf);
   //
   test_botan_point_encode(conf);
-
+  test_base64(conf);
+  test_bigint(conf);
   return 0;
 }

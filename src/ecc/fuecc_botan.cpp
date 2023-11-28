@@ -54,18 +54,39 @@ std::string botan_bn::to_bin() {
   _bn.binary_encode((uint8_t*)ret.data());
   return ret;
 }
-std::string botan_bn::to_hex() { return _bn.to_hex_string(); }
-std::string botan_bn::to_dec() { return _bn.to_dec_string(); }
+std::string botan_bn::to_hex() {
+  string ret = _bn.to_hex_string();
+  if (_bn.sign() == 0) ret = "-" + ret;
+  return ret;
+}
+std::string botan_bn::to_dec() {
+  string ret = _bn.to_dec_string();
+  if (_bn.sign() == 0) ret = "-" + ret;
+  return ret;
+}
 bool botan_bn::from_bin(const char* bin, int len) {
   _bn.binary_decode((uint8_t*)bin, len);
   return 1;
 }
 bool botan_bn::from_hex(std::string hex) {
-  _bn = _bn.decode((uint8_t*)hex.data(), hex.size(), BigInt::Base::Hexadecimal);
+  int offset = 0;
+  if (hex.size() > 0 && hex[0] == '-') {
+    offset = 1;
+  }
+  _bn = _bn.decode((uint8_t*)(hex.data() + offset), hex.size() - offset,
+                   BigInt::Base::Hexadecimal);
+  if (offset) _bn.set_sign(_bn.Sign::Negative);
   return 1;
 }
 bool botan_bn::from_dec(std::string dec) {
-  _bn = _bn.decode((uint8_t*)dec.data(), dec.size(), BigInt::Base::Decimal);
+  int offset = 0;
+  if (dec.size() > 0 && dec[0] == '-') {
+    // _bn.set_sign(_bn.Sign::Negative);
+    offset = 1;
+  }
+  _bn = _bn.decode((uint8_t*)(dec.data() + offset), dec.size() - offset,
+                   BigInt::Base::Decimal);
+  if (offset) _bn.set_sign(_bn.Sign::Negative);
   return 1;
 }
 int botan_bn::cmp(const bigint* a) {
