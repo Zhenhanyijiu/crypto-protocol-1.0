@@ -8,6 +8,8 @@
 using namespace std;
 using namespace oc;
 namespace fucrypto {
+const AES mAesFixedKey2(_mm_set_epi32(0xabcdef37, 0x1bcdef37, 0xbbcdef37,
+                                      0x2bcdef37));
 kkrt_sender::kkrt_sender() {
   u64 statSecParam = 40;
   u64 inputBitCount = 128;
@@ -195,11 +197,18 @@ int kkrt_sender::_encode(int otIdx, const void* input, void* dest,
   // static const int width(4);
   block word = ZeroBlock;
   memcpy(&word, input, mInputByteCount);
-  //   std::array<block, KKRT_WIDTH_X> choice{word, word, word, word}, code;
+//   std::array<block, KKRT_WIDTH_X> choice{word, word, word, word}, code;
+#if KKRT_WIDTH_X == 2
+  std::array<block, KKRT_WIDTH_X> choice{word, word}, code;
+  mAesFixedKey.ecbEncBlock(choice[0], code[0]);
+  mAesFixedKey2.ecbEncBlock(choice[1], code[1]);
+#else
   std::array<block, KKRT_WIDTH_X> choice, code;
   for (int i = 0; i < KKRT_WIDTH_X; i++) choice[i] = word;
-
   mMultiKeyAES.ecbEncNBlocks(choice.data(), code.data());
+#endif
+
+  //   mAesFixedKey.ecbEncBlocks(choice.data(), mT.stride(), code.data());
 
   auto* corVal = mCorrectionVals.data() + otIdx * mCorrectionVals.stride();
   auto* tVal = mT.data() + otIdx * mT.stride();
@@ -259,10 +268,19 @@ int kkrt_sender::_encode(int otIdx, const void* input, void* dest,
     return 0;
   }
   // 使用 aes
-  std::array<block, KKRT_WIDTH_X> aesBuff;
-  mAesFixedKey.ecbEncBlocks(code.data(), mT.stride(), aesBuff.data());
+  //   std::array<block, KKRT_WIDTH_X> aesBuff;
+  //   mAesFixedKey.ecbEncBlocks(code.data(), mT.stride(), aesBuff.data());
   auto val = ZeroBlock;
-  for (u64 i = 0; i < mT.stride(); ++i) val = val ^ code[i] ^ aesBuff[i];
+#if KKRT_WIDTH_X == 2
+  //   val = val ^ code[0] ^ aesBuff[0];
+  //   val = val ^ code[1] ^ aesBuff[1];
+
+  val = code[0] ^ code[1];
+
+#else
+  //   for (u64 i = 0; i < mT.stride(); ++i) val = val ^ code[i] ^ aesBuff[i];
+  for (u64 i = 0; i < mT.stride(); ++i) val = val ^ code[i];
+#endif
   //   memcpy(dest, (char*)&val, std::min(destSize, sizeof(block)));
   memcpy(dest, (char*)&val, sizeof(block));
   return 0;
@@ -441,13 +459,28 @@ int kkrt_receiver::_encode(int otIdx, const void* input, void* dest,
   // run the input word through AES to get a psuedo-random codeword. Then
   // XOR the input with the AES output.
   //   std::array<block, KKRT_WIDTH_X> choice{word, word, word, word}, code;
+
+#if KKRT_WIDTH_X == 2
+  std::array<block, KKRT_WIDTH_X> choice{word, word}, code;
+  mAesFixedKey.ecbEncBlock(choice[0], code[0]);
+  mAesFixedKey2.ecbEncBlock(choice[1], code[1]);
+#else
   std::array<block, KKRT_WIDTH_X> choice, code;
   for (int i = 0; i < KKRT_WIDTH_X; i++) choice[i] = word;
   mMultiKeyAES.ecbEncNBlocks(choice.data(), code.data());
 
-  // encode the correction value as u = T0 + T1 + c(w), there c(w) is a
-  // pseudo-random codeword.
+#endif
+  //   mAesFixedKey.ecbEncBlocks(choice.data(), KKRT_WIDTH_X, code.data());
 
+// encode the correction value as u = T0 + T1 + c(w), there c(w) is a
+// pseudo-random codeword.
+#if KKRT_WIDTH_X == 2
+  //
+  code[0] = code[0] ^ choice[0];
+  code[1] = code[1] ^ choice[1];
+  t1Val[0] = code[0] ^ t0Val[0] ^ t1Val[0];
+  t1Val[1] = code[1] ^ t0Val[1] ^ t1Val[1];
+#else
   for (u64 i = 0; i < KKRT_WIDTH_X; ++i) {
     // final code is the output of AES plus the input
     code[i] = code[i] ^ choice[i];
@@ -456,17 +489,27 @@ int kkrt_receiver::_encode(int otIdx, const void* input, void* dest,
     // this will later get sent to the sender.
     t1Val[i] = code[i] ^ t0Val[i] ^ t1Val[i];
   }
+#endif
   if (_hash) {
     _hash->hasher_reset();
     _hash->hasher_update((char*)mT0[otIdx].data(),
                          mT0[otIdx].size() * sizeof(block));
     _hash->hasher_final((char*)dest, 16);
   } else {
-    std::array<block, KKRT_WIDTH_X> aesBuff;
-    mAesFixedKey.ecbEncBlocks(t0Val, mT0.stride(), aesBuff.data());
+    // std::array<block, KKRT_WIDTH_X> aesBuff;
+    // mAesFixedKey.ecbEncBlocks(t0Val, mT0.stride(), aesBuff.data());
     oc::block val = ZeroBlock;
-    for (u64 i = 0; i < mT0.stride(); ++i) val = val ^ aesBuff[i] ^ t0Val[i];
+#if KKRT_WIDTH_X == 2
+    // val = val ^ aesBuff[0] ^ t0Val[0];
+    // val = val ^ aesBuff[1] ^ t0Val[1];
+
+    val = t0Val[0] ^ t0Val[1];
+#else
+    // for (u64 i = 0; i < mT0.stride(); ++i) val = val ^ aesBuff[i] ^ t0Val[i];
+    for (u64 i = 0; i < mT0.stride(); ++i) val = val ^ t0Val[i];
+#endif
     memcpy(dest, &val, 16);
+    // cout << ">>>>>>>>>>>>kkrt_receiver hash is null" << endl;
   }
 
 #ifndef NDEBUG

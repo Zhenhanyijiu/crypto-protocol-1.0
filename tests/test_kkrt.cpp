@@ -2,6 +2,7 @@
 #include "crypto-protocol/kkrt.h"
 #include "crypto-protocol/fulog.h"
 #include "crypto-protocol/ote_iknp.h"
+#include "crypto-protocol/utils.h"
 #include <bits/stdc++.h>
 using namespace std;
 using namespace oc;
@@ -81,21 +82,26 @@ int main_test(int argc, char** argv) {
       inputs[i].push_back(j);
     }
   }
-  vector<vector<block>> out_masks;
-  thread th1(test_kkrt_sender, ref(inputs), ref(out_masks), ref(param));
   vector<u32> choices(num_Ote);
   for (size_t i = 0; i < num_Ote; i++) {
     choices[i] = rand() % N;
   }
+  time_point tp;
+  //
+  cout << "========== start time " << tp.get_time_piont_ms() << " ms" << endl;
+  vector<vector<block>> out_masks;
+  thread th1(test_kkrt_sender, ref(inputs), ref(out_masks), ref(param));
+
   vector<block> out_dec_masks;
   thread th2(test_kkrt_receiver, ref(choices), ref(out_dec_masks), ref(param));
   th1.join();
   th2.join();
+  cout << "========== end time " << tp.get_time_piont_ms() << " ms" << endl;
   //   check
   for (size_t i = 0; i < num_Ote; i++) {
     if (i < 5 && i < num_Ote) {
       for (size_t j = 0; j < N; j++) {
-        // cout << "[" << j << "]" << out_masks[i][j] << endl;
+        cout << "[" << j << "]" << out_masks[i][j] << endl;
       }
       cout << "[" << choices[i] << "]" << out_dec_masks[i] << endl;
       cout << "[" << choices[i] << "]" << out_masks[i][choices[i]] << endl;
