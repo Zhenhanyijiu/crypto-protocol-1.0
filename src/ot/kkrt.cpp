@@ -12,7 +12,7 @@ kkrt_sender::kkrt_sender() {
   u64 statSecParam = 40;
   u64 inputBitCount = 128;
   mInputByteCount = (inputBitCount + 7) / 8;
-  mGens.resize(128 * 4);
+  mGens.resize(128 * KKRT_WIDTH_X);
 }
 kkrt_sender::kkrt_sender(const config_param& param) {
   _param = param;
@@ -20,7 +20,7 @@ kkrt_sender::kkrt_sender(const config_param& param) {
   u64 statSecParam = 40;
   u64 inputBitCount = 128;
   mInputByteCount = (inputBitCount + 7) / 8;
-  mGens.resize(128 * 4);
+  mGens.resize(128 * KKRT_WIDTH_X);
 }
 kkrt_sender::~kkrt_sender() {
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "~kkrt_sender");
@@ -49,7 +49,7 @@ int kkrt_sender::set_base_ot(const BitVector& base_choices,
 //
 int kkrt_sender::_init(int numOTExt) {
   block common_key = toBlock(0xaabbccdd, 0xffee7788);
-  std::array<block, 4> keys;
+  std::array<block, KKRT_WIDTH_X> keys;
   PRNG(common_key).get(keys.data(), keys.size());
   mMultiKeyAES.setKeys(keys);
   static const u8 superBlkSize(8);
@@ -191,11 +191,14 @@ int kkrt_sender::_encode(int otIdx, const void* input, void* dest,
 #ifndef NDEBUG
   if (eq(mCorrectionVals[otIdx][0], ZeroBlock)) return -1000;
 #endif  // !NDEBUG
-#define KKRT_WIDTH 4
+        // #define KKRT_WIDTH 4
   // static const int width(4);
   block word = ZeroBlock;
   memcpy(&word, input, mInputByteCount);
-  std::array<block, KKRT_WIDTH> choice{word, word, word, word}, code;
+  //   std::array<block, KKRT_WIDTH_X> choice{word, word, word, word}, code;
+  std::array<block, KKRT_WIDTH_X> choice, code;
+  for (int i = 0; i < KKRT_WIDTH_X; i++) choice[i] = word;
+
   mMultiKeyAES.ecbEncNBlocks(choice.data(), code.data());
 
   auto* corVal = mCorrectionVals.data() + otIdx * mCorrectionVals.stride();
@@ -203,7 +206,7 @@ int kkrt_sender::_encode(int otIdx, const void* input, void* dest,
 
   // This is the hashing phase. Here we are using pseudo-random codewords.
   // That means we assume inputword is a hash of some sort.
-#if KKRT_WIDTH == 4
+#if KKRT_WIDTH_X == 4
   code[0] = code[0] ^ word;
   code[1] = code[1] ^ word;
   code[2] = code[2] ^ word;
@@ -222,9 +225,21 @@ int kkrt_sender::_encode(int otIdx, const void* input, void* dest,
   code[1] = tVal[1] ^ t11;
   code[2] = tVal[2] ^ t12;
   code[3] = tVal[3] ^ t13;
-#else
+//   cout << "===================4" << endl;
+#elif KKRT_WIDTH_X == 2
+  code[0] = code[0] ^ word;
+  code[1] = code[1] ^ word;
 
-  for (u64 i = 0; i < KKRT_WIDTH; ++i) {
+  block t00 = corVal[0] ^ code[0];
+  block t01 = corVal[1] ^ code[1];
+  block t10 = t00 & mChoiceBlks[0];
+  block t11 = t01 & mChoiceBlks[1];
+
+  code[0] = tVal[0] ^ t10;
+  code[1] = tVal[1] ^ t11;
+//   cout << "===================2" << endl;
+#else
+  for (u64 i = 0; i < KKRT_WIDTH_X; ++i) {
     code[i] = code[i] ^ word;
 
     block t0 = corVal[i] ^ code[i];
@@ -244,7 +259,7 @@ int kkrt_sender::_encode(int otIdx, const void* input, void* dest,
     return 0;
   }
   // 使用 aes
-  std::array<block, 4> aesBuff;
+  std::array<block, KKRT_WIDTH_X> aesBuff;
   mAesFixedKey.ecbEncBlocks(code.data(), mT.stride(), aesBuff.data());
   auto val = ZeroBlock;
   for (u64 i = 0; i < mT.stride(); ++i) val = val ^ code[i] ^ aesBuff[i];
@@ -275,7 +290,7 @@ kkrt_receiver::kkrt_receiver() {
   u64 statSecParam = 40;
   u64 inputBitCount = 128;
   mInputByteCount = (inputBitCount + 7) / 8;
-  auto count = 128 * 4;
+  auto count = 128 * KKRT_WIDTH_X;
   mGens.resize(count);
 }
 
@@ -284,7 +299,7 @@ kkrt_receiver::kkrt_receiver(const config_param& param) {
   u64 statSecParam = 40;
   u64 inputBitCount = 128;
   mInputByteCount = (inputBitCount + 7) / 8;
-  auto count = 128 * 4;
+  auto count = 128 * KKRT_WIDTH_X;
   mGens.resize(count);
 }
 kkrt_receiver::~kkrt_receiver() {
@@ -306,7 +321,7 @@ int kkrt_receiver::_init(int numOtExt) {
   //   if (hasBaseOts() == false) throw std::runtime_error("rt error at "
   //   LOCATION);
   block common_key = toBlock(0xaabbccdd, 0xffee7788);
-  std::array<block, 4> keys;
+  std::array<block, KKRT_WIDTH_X> keys;
   PRNG(common_key).get(keys.data(), keys.size());
   mMultiKeyAES.setKeys(keys);
   ///////
@@ -407,9 +422,9 @@ int kkrt_receiver::_init(int numOtExt) {
 
 int kkrt_receiver::_encode(int otIdx, const void* input, void* dest,
                            int destSize) {
-  static const int width(4);
+//   static const int width(4);
 #ifndef NDEBUG
-  if (mT0.stride() != width) return -1002;
+  if (mT0.stride() != KKRT_WIDTH_X) return -1002;
   // if (choice.size() != mT0.stride())
   //     throw std::invalid_argument("");
   if (eq(mT0[otIdx][0], ZeroBlock)) return -1000;
@@ -425,13 +440,15 @@ int kkrt_receiver::_encode(int otIdx, const void* input, void* dest,
 
   // run the input word through AES to get a psuedo-random codeword. Then
   // XOR the input with the AES output.
-  std::array<block, width> choice{word, word, word, word}, code;
+  //   std::array<block, KKRT_WIDTH_X> choice{word, word, word, word}, code;
+  std::array<block, KKRT_WIDTH_X> choice, code;
+  for (int i = 0; i < KKRT_WIDTH_X; i++) choice[i] = word;
   mMultiKeyAES.ecbEncNBlocks(choice.data(), code.data());
 
   // encode the correction value as u = T0 + T1 + c(w), there c(w) is a
   // pseudo-random codeword.
 
-  for (u64 i = 0; i < width; ++i) {
+  for (u64 i = 0; i < KKRT_WIDTH_X; ++i) {
     // final code is the output of AES plus the input
     code[i] = code[i] ^ choice[i];
 
@@ -445,7 +462,7 @@ int kkrt_receiver::_encode(int otIdx, const void* input, void* dest,
                          mT0[otIdx].size() * sizeof(block));
     _hash->hasher_final((char*)dest, 16);
   } else {
-    std::array<block, 4> aesBuff;
+    std::array<block, KKRT_WIDTH_X> aesBuff;
     mAesFixedKey.ecbEncBlocks(t0Val, mT0.stride(), aesBuff.data());
     oc::block val = ZeroBlock;
     for (u64 i = 0; i < mT0.stride(); ++i) val = val ^ aesBuff[i] ^ t0Val[i];
