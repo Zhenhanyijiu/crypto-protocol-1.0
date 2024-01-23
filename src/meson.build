@@ -26,6 +26,7 @@ source_files = files(
   'coder/bloomfilter.cpp',
 #   
   'psi/cm20.cpp',
+  'ot/kkot.cpp',
 )
 
 crypto_lib = library('crypto_protocol',
