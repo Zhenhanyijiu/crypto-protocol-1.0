@@ -15,11 +15,12 @@ class kkot_sender {
   oc::BitVector mBaseChoiceBits;
   std::vector<oc::u64> mGensBlkIdx;
   std::vector<oc::block> mChoiceBlks;
-  oc::MultiKeyAES<KKOT_WIDTH_X> mMultiKeyAES;
+  //   oc::MultiKeyAES<KKOT_WIDTH_X> mMultiKeyAES;
   oc::Matrix<oc::block> mT, mCorrectionVals;
   bool _has_base_ot = false;
   int _init(int numOTExt);
-  int _encode(int otIdx, const void* input, void* dest, int destSize);
+  int _encode(int otIdx, const void* input, void* dest, int destSize,
+              int choice_id);
 
  public:
   kkot_sender();
@@ -41,12 +42,13 @@ class kkot_receiver {
   std::vector<std::array<oc::AES, 2>> mGens;
   std::vector<oc::u64> mGensBlkIdx;
   oc::u64 mInputByteCount;
-  oc::MultiKeyAES<KKOT_WIDTH_X> mMultiKeyAES;
+  //   oc::MultiKeyAES<KKOT_WIDTH_X> mMultiKeyAES;
   oc::Matrix<oc::block> mT0, mT1;
   oc::u64 mCorrectionIdx;
   bool _has_base_ot = false;
   int _init(int numOTExt);
-  int _encode(int otIdx, const void* input, void* dest, int destSize);
+  int _encode(int otIdx, const void* input, void* dest, int destSize,
+              int choice_id);
 
  public:
   kkot_receiver();

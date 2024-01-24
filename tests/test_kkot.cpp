@@ -99,16 +99,25 @@ int main_test(int argc, char** argv) {
   cout << "========== end time " << tp.get_time_piont_ms() << " ms" << endl;
   //   check
   for (size_t i = 0; i < num_Ote; i++) {
-    if (i < 5 && i < num_Ote) {
+    if (i < 100 && i < num_Ote) {
+      // if (i < num_Ote) {
+      //   set<block> tmp;
       for (size_t j = 0; j < N; j++) {
         cout << "[" << j << "]" << out_masks[i][j] << endl;
+        // tmp.insert(out_masks[i][j]);
       }
+      //   if (tmp.size() != N) {
+      //     cout << "tmp.size()!=N error i:" << i << endl;
+      //     return 0;
+      //   }
       cout << "[" << choices[i] << "]" << out_dec_masks[i] << endl;
       cout << "[" << choices[i] << "]" << out_masks[i][choices[i]] << endl;
       cout << endl;
     }
-    if (neq(out_dec_masks[i], out_masks[i][choices[i]]))
-      cout << "kkot check not ok" << endl;
+    if (neq(out_dec_masks[i], out_masks[i][choices[i]])) {
+      cout << "kkot check not ok ,i:" << i << endl;
+      return 0;
+    }
     // return 0;
   }
   cout << "kkot check ok" << endl;
@@ -119,5 +128,9 @@ int main_test(int argc, char** argv) {
 int main(int argc, char** argv) {
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "=== test kkot ===");
   main_test(argc, argv);
+  //   int tmp[4];
+  for (int i = 0; i < 4; i++) {
+    cout << hex << rand() << ",";
+  }
   return 0;
 }

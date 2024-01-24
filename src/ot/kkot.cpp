@@ -8,8 +8,8 @@
 using namespace std;
 using namespace oc;
 namespace fucrypto {
-const AES mAesFixedKey2(_mm_set_epi32(0xabcdef37, 0x1bcdef37, 0xbbcdef37,
-                                      0x2bcdef37));
+const AES mAesFixedKey2(_mm_set_epi32(0x6a8fd331, 0xfce8754c, 0x1185a805,
+                                      0xae0d3b73));
 kkot_sender::kkot_sender() {
   u64 statSecParam = 40;
   u64 inputBitCount = 128;
@@ -51,9 +51,9 @@ int kkot_sender::set_base_ot(const BitVector& base_choices,
 //
 int kkot_sender::_init(int numOTExt) {
   block common_key = toBlock(0xaabbccdd, 0xffee7788);
-  std::array<block, KKOT_WIDTH_X> keys;
-  PRNG(common_key).get(keys.data(), keys.size());
-  mMultiKeyAES.setKeys(keys);
+  //   std::array<block, KKOT_WIDTH_X> keys;
+  //   PRNG(common_key).get(keys.data(), keys.size());
+  //   mMultiKeyAES.setKeys(keys);
   static const u8 superBlkSize(8);
   // round up
   numOTExt = ((numOTExt + 127) / 128) * 128;
@@ -188,8 +188,8 @@ int kkot_sender::recv_correction(conn* sock, int num_otext) {
   on_error_exit.dismiss();
   return 0;
 }
-int kkot_sender::_encode(int otIdx, const void* input, void* dest,
-                         int destSize) {
+int kkot_sender::_encode(int otIdx, const void* input, void* dest, int destSize,
+                         int choice_id) {
 #ifndef NDEBUG
   if (eq(mCorrectionVals[otIdx][0], ZeroBlock)) return -1000;
 #endif  // !NDEBUG
@@ -200,8 +200,11 @@ int kkot_sender::_encode(int otIdx, const void* input, void* dest,
 //   std::array<block, KKRT_WIDTH_X> choice{word, word, word, word}, code;
 #if KKOT_WIDTH_X == 2
   std::array<block, KKOT_WIDTH_X> choice{word, word}, code;
-  mAesFixedKey.ecbEncBlock(choice[0], code[0]);
-  mAesFixedKey2.ecbEncBlock(choice[1], code[1]);
+  //   mAesFixedKey.ecbEncBlock(choice[0], code[0]);
+  //   mAesFixedKey2.ecbEncBlock(choice[1], code[1]);
+  block* bp = (block*)(WH_Code[choice_id]);
+  code[0] = bp[0];
+  code[1] = bp[1];
 #else
   std::array<block, KKOT_WIDTH_X> choice, code;
   for (int i = 0; i < KKOT_WIDTH_X; i++) choice[i] = word;
@@ -236,8 +239,8 @@ int kkot_sender::_encode(int otIdx, const void* input, void* dest,
   code[3] = tVal[3] ^ t13;
 //   cout << "===================4" << endl;
 #elif KKOT_WIDTH_X == 2
-  code[0] = code[0] ^ word;
-  code[1] = code[1] ^ word;
+  //   code[0] = code[0] ^ word;
+  //   code[1] = code[1] ^ word;
 
   block t00 = corVal[0] ^ code[0];
   block t01 = corVal[1] ^ code[1];
@@ -275,7 +278,11 @@ int kkot_sender::_encode(int otIdx, const void* input, void* dest,
   //   val = val ^ code[0] ^ aesBuff[0];
   //   val = val ^ code[1] ^ aesBuff[1];
 
+  //   mAesFixedKey.ecbEncBlocks(code.data(), 2, code.data());
+  //   code[0] = mAesFixedKey2.ecbEncBlock(code[0]);
   val = code[0] ^ code[1];
+  //   uint64_t* tmp = (uint64_t*)&val;
+  //   val = toBlock(0, tmp[0] ^ tmp[1]);
 
 #else
   //   for (u64 i = 0; i < mT.stride(); ++i) val = val ^ code[i] ^ aesBuff[i];
@@ -297,7 +304,7 @@ int kkot_sender::encode_all(int num_otext,
     oc::block* begin = (oc::block*)out_mask[i].data();
     for (auto j = 0; j < input_num_i; ++j) {
       *(begin + j) = oc::toBlock(inputs[i][j]);
-      _encode(i, begin + j, begin + j, 16);
+      _encode(i, begin + j, begin + j, 16, j);
     }
   }
   return 0;
@@ -339,9 +346,9 @@ int kkot_receiver::_init(int numOtExt) {
   //   if (hasBaseOts() == false) throw std::runtime_error("rt error at "
   //   LOCATION);
   block common_key = toBlock(0xaabbccdd, 0xffee7788);
-  std::array<block, KKOT_WIDTH_X> keys;
-  PRNG(common_key).get(keys.data(), keys.size());
-  mMultiKeyAES.setKeys(keys);
+  //   std::array<block, KKOT_WIDTH_X> keys;
+  //   PRNG(common_key).get(keys.data(), keys.size());
+  //   mMultiKeyAES.setKeys(keys);
   ///////
   static const u64 superBlkSize(8);
 
@@ -439,7 +446,7 @@ int kkot_receiver::_init(int numOtExt) {
 }
 
 int kkot_receiver::_encode(int otIdx, const void* input, void* dest,
-                           int destSize) {
+                           int destSize, int choice_id) {
 //   static const int width(4);
 #ifndef NDEBUG
   if (mT0.stride() != KKOT_WIDTH_X) return -1002;
@@ -462,8 +469,11 @@ int kkot_receiver::_encode(int otIdx, const void* input, void* dest,
 
 #if KKOT_WIDTH_X == 2
   std::array<block, KKOT_WIDTH_X> choice{word, word}, code;
-  mAesFixedKey.ecbEncBlock(choice[0], code[0]);
-  mAesFixedKey2.ecbEncBlock(choice[1], code[1]);
+  //   mAesFixedKey.ecbEncBlock(choice[0], code[0]);
+  //   mAesFixedKey2.ecbEncBlock(choice[1], code[1]);
+  block* bp = (block*)(WH_Code[choice_id]);
+  code[0] = bp[0];
+  code[1] = bp[1];
 #else
   std::array<block, KKOT_WIDTH_X> choice, code;
   for (int i = 0; i < KKOT_WIDTH_X; i++) choice[i] = word;
@@ -476,8 +486,8 @@ int kkot_receiver::_encode(int otIdx, const void* input, void* dest,
 // pseudo-random codeword.
 #if KKOT_WIDTH_X == 2
   //
-  code[0] = code[0] ^ choice[0];
-  code[1] = code[1] ^ choice[1];
+  //   code[0] = code[0] ^ word[0];
+  //   code[1] = code[1] ^ word[1];
   t1Val[0] = code[0] ^ t0Val[0] ^ t1Val[0];
   t1Val[1] = code[1] ^ t0Val[1] ^ t1Val[1];
 #else
@@ -503,7 +513,12 @@ int kkot_receiver::_encode(int otIdx, const void* input, void* dest,
     // val = val ^ aesBuff[0] ^ t0Val[0];
     // val = val ^ aesBuff[1] ^ t0Val[1];
 
+    // mAesFixedKey.ecbEncBlocks(t0Val, 2, t0Val);
+    // t0Val[0] = mAesFixedKey2.ecbEncBlock(t0Val[0]);
     val = t0Val[0] ^ t0Val[1];
+    // uint64_t* tmp = (uint64_t*)&val;
+    // val = toBlock(0, tmp[0] ^ tmp[1]);
+
 #else
     // for (u64 i = 0; i < mT0.stride(); ++i) val = val ^ aesBuff[i] ^ t0Val[i];
     for (u64 i = 0; i < mT0.stride(); ++i) val = val ^ t0Val[i];
@@ -564,7 +579,7 @@ int kkot_receiver::encode_all(int numOTExt, const vector<uint32_t>& inputs,
   auto begin = out_mask.data();
   for (auto k = 0ull; k < numOTExt; ++k) {
     *(begin + k) = oc::toBlock(inputs[k]);
-    _encode(k, begin + k, begin + k, 16);
+    _encode(k, begin + k, begin + k, 16, inputs[k]);
   }
   return 0;
 }
