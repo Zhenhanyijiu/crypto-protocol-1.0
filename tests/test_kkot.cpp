@@ -99,7 +99,7 @@ int main_test(int argc, char** argv) {
   cout << "========== end time " << tp.get_time_piont_ms() << " ms" << endl;
   //   check
   for (size_t i = 0; i < num_Ote; i++) {
-    if (i < 100 && i < num_Ote) {
+    if (i < 10 && i < num_Ote) {
       // if (i < num_Ote) {
       //   set<block> tmp;
       for (size_t j = 0; j < N; j++) {
@@ -125,6 +125,34 @@ int main_test(int argc, char** argv) {
   return 0;
 }
 
+uint64_t get64() {
+  int tmp1 = rand();
+  int tmp2 = rand();
+  int tmp3 = rand();
+  uint64_t tmp;
+  char* p = (char*)&tmp;
+  memcpy(p, &tmp1, 3);
+  memcpy(p + 3, &tmp2, 3);
+  memcpy(p + 6, &tmp3, 2);
+  return tmp;
+}
+void test_gen_wh_code() {
+  srand(time(NULL));
+  //   uint64_t WH_Code[256][8];
+  int count = 256;
+  cout << hex << "{" << endl;
+  for (size_t i = 0; i < count; i++) {
+    cout << "{0x" << get64() << ",";
+    cout << "0x" << get64() << ",";
+    cout << "0x" << get64() << ",";
+    cout << "0x" << get64() << ",";
+    cout << "0x" << get64() << ",";
+    cout << "0x" << get64() << ",";
+    cout << "0x" << get64() << ",";
+    cout << "0x" << get64() << "},";
+  }
+  cout << "}" << endl;
+}
 int main(int argc, char** argv) {
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "=== test kkot ===");
   main_test(argc, argv);
@@ -132,5 +160,7 @@ int main(int argc, char** argv) {
   for (int i = 0; i < 4; i++) {
     cout << hex << rand() << ",";
   }
+  cout << endl;
+  //   test_gen_wh_code();
   return 0;
 }
