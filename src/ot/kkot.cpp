@@ -15,14 +15,16 @@ kkot_sender::kkot_sender() {
   u64 inputBitCount = 128;
   mInputByteCount = (inputBitCount + 7) / 8;
   mGens.resize(128 * KKOT_WIDTH_X);
+  _N = 16;
 }
-kkot_sender::kkot_sender(const config_param& param) {
+kkot_sender::kkot_sender(const config_param& param, int N) {
   _param = param;
   // hash 先不配置
   u64 statSecParam = 40;
   u64 inputBitCount = 128;
   mInputByteCount = (inputBitCount + 7) / 8;
   mGens.resize(128 * KKOT_WIDTH_X);
+  _N = N;
 }
 kkot_sender::~kkot_sender() {
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "~kkot_sender");
@@ -185,12 +187,11 @@ int kkot_sender::recv_correction(conn* sock, int num_otext) {
   on_error_exit.dismiss();
   return 0;
 }
-int kkot_sender::_encode(int otIdx, const void* input, void* dest, int destSize,
-                         int choice_id) {
+int kkot_sender::_encode(int otIdx, oc::block* dest, int choice_id) {
 #ifndef NDEBUG
 //   if (eq(mCorrectionVals[otIdx][0], ZeroBlock)) return -1000;
 #endif
-  block* whcode = (block*)(WH_Code[choice_id]);
+  block* whcode = (block*)(WH_Code[(uint32_t)choice_id]);
   array<block, KKOT_WIDTH_X> code;
   for (size_t i = 0; i < KKOT_WIDTH_X; i++) {
     code[i] = whcode[i];
@@ -225,20 +226,73 @@ int kkot_sender::_encode(int otIdx, const void* input, void* dest, int destSize,
   return 0;
 }
 
-int kkot_sender::encode_all(int num_otext,
-                            const vector<vector<uint32_t>>& inputs,
-                            vector<vector<block>>& out_mask) {
+int kkot_sender::encode_all(int num_otext, vector<vector<block>>& out_mask) {
   out_mask.resize(num_otext);
-  if (num_otext != inputs.size()) return -100;
+  //   if (num_otext != inputs.size()) return -100;
   for (auto i = 0; i < num_otext; ++i) {
-    int input_num_i = inputs[i].size();
-    out_mask[i].resize(input_num_i);
+    // int input_num_i = inputs[i].size();
+    out_mask[i].resize(_N);
     oc::block* begin = (oc::block*)out_mask[i].data();
-    for (auto j = 0; j < input_num_i; ++j) {
-      *(begin + j) = oc::toBlock(inputs[i][j]);
-      _encode(i, begin + j, begin + j, 16, j);
+    for (auto j = 0; j < _N; ++j) {
+      //   *(begin + j) = oc::toBlock(j);
+      _encode(i, begin + j, j);
     }
   }
+  return 0;
+}
+
+int kkot_sender::send(conn* sock, const std::vector<std::vector<uint8_t>>& data,
+                      int bit_l) {
+  assert(bit_l > 0);
+  assert(bit_l <= 8);
+  int num_otext = data.size();
+  this->recv_correction(sock, num_otext);
+  vector<vector<block>> out_masks;
+  this->encode_all(num_otext, out_masks);
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "kkot_sender kkot pre end out_masks.size:{},N:{}",
+                     out_masks.size(), _N);
+  //   bit_l 表示发送的数据的有效 bit 长度
+  int all_bit_len = bit_l * _N * num_otext;
+  //   need bytes
+  //   int all_bytes_size = (all_bit_len + 7) / 8;
+  //   string buff(all_bytes_size, '\0');
+  //   int
+  stringstream ssbuff;
+  int min_num = (_N * bit_l + 7) / 8;
+  uint8_t tmp[min_num];
+  uint8_t mask = (1 << bit_l) - 1;
+  for (size_t i = 0; i < num_otext; i++) {
+    memset(tmp, 0, min_num);
+    for (size_t j = 0; j < _N; j++) {
+      int b_index = j * bit_l / 8;
+      int bit_index = j * bit_l % 8;
+      uint8_t key = (*(uint8_t*)&out_masks[i][j]) & mask;
+      uint8_t x = data[i][j] ^ key;
+      tmp[b_index] |= (x << bit_index);
+      if (i == 0) {
+        cout << "### j:" << j << "," << uint32_t(key) << endl;
+      }
+    }
+    ssbuff << string((char*)tmp, min_num);
+    if (i == 0) {
+      for (size_t i2 = 0; i2 < min_num; i2++) {
+        printf("%x,", tmp[i2]);
+      }
+      cout << endl;
+    }
+  }
+  for (size_t i = 0; i < 10 && i < num_otext; i++) {
+    cout << "i:" << i << endl;
+    for (size_t j = 0; j < _N; j++) {
+      cout << "[" << j << "]:" << out_masks[i][j] << endl;
+    }
+    cout << endl;
+  }
+
+  sock->send(ssbuff.str());
+  cout << "recv mask:" << (uint32_t)mask << endl;
+
   return 0;
 }
 
@@ -249,15 +303,17 @@ kkot_receiver::kkot_receiver() {
   mInputByteCount = (inputBitCount + 7) / 8;
   auto count = 128 * KKOT_WIDTH_X;
   mGens.resize(count);
+  _N = 16;
 }
 
-kkot_receiver::kkot_receiver(const config_param& param) {
+kkot_receiver::kkot_receiver(const config_param& param, int N) {
   _param = param;
   u64 statSecParam = 40;
   u64 inputBitCount = 128;
   mInputByteCount = (inputBitCount + 7) / 8;
   auto count = 128 * KKOT_WIDTH_X;
   mGens.resize(count);
+  _N = 16;
 }
 kkot_receiver::~kkot_receiver() {
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "~kkot_receiver");
@@ -377,8 +433,7 @@ int kkot_receiver::_init(int numOtExt) {
   return 0;
 }
 
-int kkot_receiver::_encode(int otIdx, const void* input, void* dest,
-                           int destSize, int choice_id) {
+int kkot_receiver::_encode(int otIdx, oc::block* dest, int choice_id) {
 #ifndef NDEBUG
 //   if (mT0.stride() != KKOT_WIDTH_X) return -1002;
 //   if (eq(mT0[otIdx][0], ZeroBlock)) return -1000;
@@ -388,7 +443,7 @@ int kkot_receiver::_encode(int otIdx, const void* input, void* dest,
   block* t0Val = mT0.data() + mT0.stride() * otIdx;
   block* t1Val = mT1.data() + mT0.stride() * otIdx;
 
-  block* whcode = (block*)(WH_Code[choice_id]);
+  block* whcode = (block*)(WH_Code[uint32_t(choice_id)]);
   std::array<block, KKOT_WIDTH_X> code;
   for (size_t i = 0; i < KKOT_WIDTH_X; i++) {
     code[i] = whcode[i];
@@ -443,7 +498,7 @@ int kkot_receiver::send_correction(conn* sock, int sendCount) {
   return 0;
 }
 
-int kkot_receiver::encode_all(int numOTExt, const vector<uint32_t>& inputs,
+int kkot_receiver::encode_all(int numOTExt, const vector<int>& r_i,
                               vector<block>& out_mask, conn* sock) {
   if (!_has_base_ot) {
     int base_ot_num = get_base_ot_count();
@@ -465,9 +520,51 @@ int kkot_receiver::encode_all(int numOTExt, const vector<uint32_t>& inputs,
   out_mask.resize(numOTExt);
   auto begin = out_mask.data();
   for (auto k = 0ull; k < numOTExt; ++k) {
-    *(begin + k) = oc::toBlock(inputs[k]);
-    _encode(k, begin + k, begin + k, 16, inputs[k]);
+    // *(begin + k) = oc::toBlock(inputs[k]);
+    _encode(k, begin + k, r_i[k]);
   }
   return 0;
 }
+
+int kkot_receiver::recv(conn* sock, const std::vector<int>& r_i,
+                        std::vector<uint8_t>& out_data, int bit_l) {
+  int numOTExt = r_i.size();
+  out_data.resize(numOTExt);
+  vector<block> out_masks;
+  this->encode_all(numOTExt, r_i, out_masks, sock);
+  this->send_correction(sock, numOTExt);
+  string buff = sock->recv();
+  cout << ">>>>>>>>>buff.size:" << buff.size() << endl;
+  for (size_t i = 0; i < 10 && i < numOTExt; i++) {
+    cout << "i:" << i << ",r:" << uint32_t(r_i[i]) << "," << out_masks[i]
+         << endl;
+  }
+
+  int min_num = (_N * bit_l + 7) / 8;
+  uint8_t tmp[min_num];
+  uint8_t mask = (1 << bit_l) - 1;
+  int offset = 0;
+  for (size_t i = 0; i < numOTExt; i++) {
+    memcpy(tmp, buff.data() + offset, min_num);
+    if (i == 0) {
+      for (size_t i2 = 0; i2 < min_num; i2++) {
+        printf("%x,", tmp[i2]);
+      }
+      cout << endl;
+    }
+    int b_index = r_i[i] * bit_l / 8;
+    int bit_index = r_i[i] * bit_l % 8;
+    uint8_t key = (*(uint8_t*)&out_masks[i]) & mask;
+    uint8_t x = ((tmp[b_index] >> bit_index) & mask) ^ key;
+    out_data[i] = x;
+    offset += min_num;
+    if (i == 0) {
+      printf("### r_i[i]:%d,%d", r_i[i], key);
+    }
+  }
+  cout << "recv mask:" << (uint32_t)mask << endl;
+
+  return 0;
+}
+
 }  // namespace fucrypto

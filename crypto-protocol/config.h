@@ -9,6 +9,7 @@ struct config_param {
   std::string ote_name = "iknp";
   std::string ot_n_1_name = "kkrt";
   std::string hasher_name = "sha256";
+  //   int N = 16;
 };
 // extern config_param default_config_param;
 ;
