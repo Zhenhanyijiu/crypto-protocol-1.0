@@ -128,10 +128,10 @@ int main_test(int argc, char** argv) {
 }
 
 void test_kkot_sender2(int num_ot, vector<vector<uint8_t>>& in_data,
-                       config_param& param) {
+                       config_param& param, int N, int bit_l) {
   int numOTExt = num_ot;
   connection c(0, "127.0.0.1", 9001);
-  kkot_sender kkot(param, 16);
+  kkot_sender kkot(param, N);
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "kkot_sender create");
 #if 0
   int base_ot_num = kkot.get_base_ot_count();
@@ -149,7 +149,7 @@ void test_kkot_sender2(int num_ot, vector<vector<uint8_t>>& in_data,
 
   kkot.set_base_ot(base_choices, single_keys);
 #endif
-  kkot.send(&c, in_data, 2);
+  kkot.send(&c, in_data, bit_l);
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "kkot sender sendBytes:{} B",
                      (&c)->send_bytes_count());
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "kkot sender recvBytes:{} B",
@@ -157,10 +157,10 @@ void test_kkot_sender2(int num_ot, vector<vector<uint8_t>>& in_data,
 }
 
 void test_kkot_receiver2(const vector<int>& r_i, vector<uint8_t>& out_data,
-                         config_param& param) {
+                         config_param& param, int N, int bit_l) {
   //   int numOTExt = choices.size();
   connection c(1, "127.0.0.1", 9001);
-  kkot_receiver kkot(param, 16);
+  kkot_receiver kkot(param, N);
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "kkrt_receiver create");
 
 #if 0
@@ -176,7 +176,7 @@ void test_kkot_receiver2(const vector<int>& r_i, vector<uint8_t>& out_data,
   //
   kkot.set_base_ot(pair_keys);
 #endif
-  kkot.recv(&c, r_i, out_data, 2);
+  kkot.recv(&c, r_i, out_data, bit_l);
   //  解密
 
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "kkot recver sendBytes:{} B",
@@ -188,16 +188,17 @@ int main_test2(int argc, char** argv) {
   srand(time(NULL));
   int num_Ote = 1 << 19;
   if (argc > 1) num_Ote = atoi(argv[1]);
-  int N = 16;
+  int N = 16, bit_l = 2;
   if (argc > 2) N = atoi(argv[2]);
   config_param param;
   param.hasher_name = "blake3";
-  int mask = (1 << 2) - 1;
-
+  uint8_t mask = (1 << bit_l) - 1;
+  if (bit_l == 8) mask = -1;
+  printf("===== mask:%d\n", mask);
   vector<vector<uint8_t>> inputs(num_Ote);
   for (size_t i = 0; i < num_Ote; i++) {
     for (size_t j = 0; j < N; j++) {
-      inputs[i].push_back((j & mask));
+      inputs[i].push_back((rand() & mask));
     }
   }
   vector<int> choices(num_Ote);
@@ -208,10 +209,11 @@ int main_test2(int argc, char** argv) {
   //
   cout << "========== start time " << tp.get_time_piont_ms() << " ms" << endl;
   //   vector<vector<block>> out_masks;
-  thread th1(test_kkot_sender2, num_Ote, ref(inputs), ref(param));
+  thread th1(test_kkot_sender2, num_Ote, ref(inputs), ref(param), N, bit_l);
 
   vector<uint8_t> out_data;
-  thread th2(test_kkot_receiver2, ref(choices), ref(out_data), ref(param));
+  thread th2(test_kkot_receiver2, ref(choices), ref(out_data), ref(param), N,
+             bit_l);
   th1.join();
   th2.join();
   cout << "========== end time " << tp.get_time_piont_ms() << " ms" << endl;
@@ -273,15 +275,88 @@ void test_gen_wh_code() {
   }
   cout << "}" << endl;
 }
+
+void test_N_bit_l() {
+  int N = 16, bit_l = 3;
+  uint8_t mask = (1 << bit_l) - 1;
+  cout << "mask:" << (uint32_t)mask << endl;
+  vector<uint8_t> inputs(16);
+  vector<uint8_t> key(16);
+  stringstream ss1, ss2;
+  char tmp2[16];
+  for (size_t i = 0; i < 16; i++) {
+    inputs[i] = rand() & mask;
+    key[i] = rand() & mask;
+    sprintf(tmp2, "(%d,%d),", i, inputs[i]);
+    ss1 << string(tmp2);
+    sprintf(tmp2, "(%d,%d),", i, key[i]);
+    ss2 << string(tmp2);
+  }
+  cout << "inputs:" << ss1.str() << endl;
+  cout << "key   :" << ss2.str() << endl;
+  //
+  int min_num = (N * bit_l + 7) / 8;
+  printf("need min_num:%d\n", min_num);
+  uint8_t tmp[min_num];
+  memset(tmp, 0, min_num);
+  int print = 4;
+  for (size_t j = 0; j < N; j++) {
+    int bit_pos = j * bit_l;
+    uint8_t x = inputs[j] ^ key[j];
+    uint8_t shift = 0;
+    //
+    if (j < print) cout << "j:" << j << ",x:" << (uint32_t)x << endl;
+    for (size_t k = bit_pos; k < bit_pos + bit_l; k++, shift++) {
+      if (j < print) cout << "bit_pos:" << k;
+      int b_index = k / 8;
+      int bit_index = k % 8;
+      if (j < print)
+        cout << "||b_index:" << b_index << ",bit_index:" << bit_index << endl;
+      uint8_t tt = ((x >> shift) & uint8_t(0x1));
+      uint8_t t = tt << bit_index;
+      tmp[b_index] |= t;
+    }
+    if (j < print) cout << endl;
+  }
+  for (size_t i = 0; i < min_num; i++) {
+    cout << hex << (uint32_t)tmp[i] << ",";
+    for (size_t j = 0; j < 8; j++) {
+      printf("%d", ((tmp[i] >> j) & 0x1));
+    }
+    cout << endl;
+  }
+  cout << endl;
+  //
+  cout << "............. recover ................" << endl;
+  uint8_t r = 4;
+  uint8_t k_r = key[r];
+  printf("r:%d,k_r:%d\n", r, k_r);
+  int bit_pos = r * bit_l;
+  printf("bit_pos:%d \n", bit_pos);
+  int shift = 0;
+  uint8_t ret = 0;
+  for (size_t k = bit_pos; k < bit_pos + bit_l; k++, shift++) {
+    int byte_index = k / 8;
+    int bit_index = k % 8;
+    cout << "bit_pos:" << k;
+    cout << "||b_index:" << byte_index << ",bit_index:" << bit_index << endl;
+    ret |= (((tmp[byte_index] >> bit_index) & 0x1) << shift);
+    printf(">>>ret:%d\n", ret);
+  }
+  printf("ret:%d,ok:%d\n", (ret ^ k_r), inputs[r]);
+}
 int main(int argc, char** argv) {
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "=== test kkot ===");
   //   main_test(argc, argv);
   main_test2(argc, argv);
   //   int tmp[4];
+  //   test_N_bit_l();
   for (int i = 0; i < 4; i++) {
-    cout << hex << rand() << ",";
+    // cout << hex << rand() << ",";
   }
   cout << endl;
+  uint8_t mask = (1 << 8) - 1;
+  printf(">>>>>>>>>.mask:%d\n", mask);
   //   test_gen_wh_code();
   return 0;
 }

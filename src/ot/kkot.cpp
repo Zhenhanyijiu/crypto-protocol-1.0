@@ -253,25 +253,33 @@ int kkot_sender::send(conn* sock, const std::vector<std::vector<uint8_t>>& data,
                      "kkot_sender kkot pre end out_masks.size:{},N:{}",
                      out_masks.size(), _N);
   //   bit_l 表示发送的数据的有效 bit 长度
-  int all_bit_len = bit_l * _N * num_otext;
+  //   int all_bit_len = bit_l * _N * num_otext;
   //   need bytes
   //   int all_bytes_size = (all_bit_len + 7) / 8;
   //   string buff(all_bytes_size, '\0');
   //   int
   stringstream ssbuff;
   int min_num = (_N * bit_l + 7) / 8;
+  cout << "=== min_num:" << min_num << endl;
   uint8_t tmp[min_num];
   uint8_t mask = (1 << bit_l) - 1;
   for (size_t i = 0; i < num_otext; i++) {
     memset(tmp, 0, min_num);
     for (size_t j = 0; j < _N; j++) {
-      int b_index = j * bit_l / 8;
-      int bit_index = j * bit_l % 8;
+      //   int b_index = j * bit_l / 8;
+      //   int bit_index = j * bit_l % 8;
+      //   uint8_t key = (*(uint8_t*)&out_masks[i][j]) & mask;
+      //   uint8_t x = data[i][j] ^ key;
+      //   tmp[b_index] |= (x << bit_index);
+      //   if (i == 0) {
+      //     cout << "### j:" << j << "," << uint32_t(key) << endl;
+      //   }
       uint8_t key = (*(uint8_t*)&out_masks[i][j]) & mask;
       uint8_t x = data[i][j] ^ key;
-      tmp[b_index] |= (x << bit_index);
-      if (i == 0) {
-        cout << "### j:" << j << "," << uint32_t(key) << endl;
+      int bit_pos = j * bit_l, shift = 0;
+      for (size_t k = bit_pos; k < bit_pos + bit_l; k++, shift++) {
+        int byte_index = k / 8, bit_index = k % 8;
+        tmp[byte_index] |= ((x >> shift) & 0x1) << bit_index;
       }
     }
     ssbuff << string((char*)tmp, min_num);
@@ -282,13 +290,13 @@ int kkot_sender::send(conn* sock, const std::vector<std::vector<uint8_t>>& data,
       cout << endl;
     }
   }
-  for (size_t i = 0; i < 10 && i < num_otext; i++) {
-    cout << "i:" << i << endl;
-    for (size_t j = 0; j < _N; j++) {
-      cout << "[" << j << "]:" << out_masks[i][j] << endl;
-    }
-    cout << endl;
-  }
+  //   for (size_t i = 0; i < 10 && i < num_otext; i++) {
+  //     cout << "i:" << i << endl;
+  //     for (size_t j = 0; j < _N; j++) {
+  //       cout << "[" << j << "]:" << out_masks[i][j] << endl;
+  //     }
+  //     cout << endl;
+  //   }
 
   sock->send(ssbuff.str());
   cout << "recv mask:" << (uint32_t)mask << endl;
@@ -529,41 +537,38 @@ int kkot_receiver::encode_all(int numOTExt, const vector<int>& r_i,
 int kkot_receiver::recv(conn* sock, const std::vector<int>& r_i,
                         std::vector<uint8_t>& out_data, int bit_l) {
   int numOTExt = r_i.size();
-  out_data.resize(numOTExt);
+  out_data.resize(numOTExt, 0);
   vector<block> out_masks;
   this->encode_all(numOTExt, r_i, out_masks, sock);
   this->send_correction(sock, numOTExt);
   string buff = sock->recv();
   cout << ">>>>>>>>>buff.size:" << buff.size() << endl;
-  for (size_t i = 0; i < 10 && i < numOTExt; i++) {
-    cout << "i:" << i << ",r:" << uint32_t(r_i[i]) << "," << out_masks[i]
-         << endl;
-  }
 
   int min_num = (_N * bit_l + 7) / 8;
   uint8_t tmp[min_num];
   uint8_t mask = (1 << bit_l) - 1;
   int offset = 0;
-  for (size_t i = 0; i < numOTExt; i++) {
+  for (size_t i = 0; i < numOTExt; i++, offset += min_num) {
     memcpy(tmp, buff.data() + offset, min_num);
-    if (i == 0) {
-      for (size_t i2 = 0; i2 < min_num; i2++) {
-        printf("%x,", tmp[i2]);
-      }
-      cout << endl;
-    }
-    int b_index = r_i[i] * bit_l / 8;
-    int bit_index = r_i[i] * bit_l % 8;
+    // int b_index = r_i[i] * bit_l / 8;
+    // int bit_index = r_i[i] * bit_l % 8;
+    // uint8_t key = (*(uint8_t*)&out_masks[i]) & mask;
+    // uint8_t x = ((tmp[b_index] >> bit_index) & mask) ^ key;
+    // out_data[i] = x;
+    // offset += min_num;
+    // if (i == 0) {
+    //   printf("### r_i[i]:%d,%d", r_i[i], key);
+    // }
     uint8_t key = (*(uint8_t*)&out_masks[i]) & mask;
-    uint8_t x = ((tmp[b_index] >> bit_index) & mask) ^ key;
-    out_data[i] = x;
-    offset += min_num;
-    if (i == 0) {
-      printf("### r_i[i]:%d,%d", r_i[i], key);
+    int bit_pos = r_i[i] * bit_l, shift = 0;
+    int byte_index = 0, bit_index = 0;
+    for (size_t k = bit_pos; k < bit_pos + bit_l; k++, shift++) {
+      byte_index = k / 8, bit_index = k % 8;
+      out_data[i] |= ((tmp[byte_index] >> bit_index) & 0x1) << shift;
     }
+    out_data[i] ^= key;
   }
   cout << "recv mask:" << (uint32_t)mask << endl;
-
   return 0;
 }
 
