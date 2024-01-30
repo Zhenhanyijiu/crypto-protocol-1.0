@@ -187,10 +187,18 @@ void test_kkot_receiver2(const vector<int>& r_i, vector<uint8_t>& out_data,
 }
 int main_test2(int argc, char** argv) {
   srand(time(NULL));
+  bool is_power = false;
   int num_Ote = 1 << 19;
-  if (argc > 1) num_Ote = atoi(argv[1]);
-  int N = 16, bit_l = 2;
+  if (argc > 1) {
+    if (is_power)
+      num_Ote = 1 << atoi(argv[1]);
+    else
+      num_Ote = atoi(argv[1]);
+  }
+  //   if (argc > 1) num_Ote = atoi(argv[1]);
+  int N = 16, bit_l = 1;
   if (argc > 2) N = atoi(argv[2]);
+  if (argc > 3) bit_l = atoi(argv[3]);
   config_param param;
   param.hasher_name = "blake3";
   uint8_t mask = (1 << bit_l) - 1;
@@ -220,7 +228,7 @@ int main_test2(int argc, char** argv) {
   cout << "========== end time " << tp.get_time_piont_ms() << " ms" << endl;
   //   check
   for (size_t i = 0; i < num_Ote; i++) {
-    if (i < 10 && i < num_Ote) {
+    if (i < 3 && i < num_Ote) {
       // if (i < num_Ote) {
       //   set<block> tmp;
       for (size_t j = 0; j < N; j++) {
@@ -244,7 +252,7 @@ int main_test2(int argc, char** argv) {
     // return 0;
   }
   cout << "kkot2 check ok" << endl;
-  cout << "ote_num:" << num_Ote << ",N:" << N << endl;
+  cout << "ote_num:" << num_Ote << ",N:" << N << ",bit_l:" << bit_l << endl;
   return 0;
 }
 

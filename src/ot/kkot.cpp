@@ -535,8 +535,8 @@ int kkot_receiver::encode_all(int numOTExt, const vector<int>& r_i,
   return 0;
 }
 
-int kkot_receiver::recv(conn* sock, const std::vector<int>& r_i,
-                        std::vector<uint8_t>& out_data, int N, int bit_l) {
+int kkot_receiver::recv(conn* sock, const vector<int>& r_i,
+                        vector<uint8_t>& out_data, int N, int bit_l) {
   int numOTExt = r_i.size();
   out_data.resize(numOTExt, 0);
   vector<block> out_masks;
