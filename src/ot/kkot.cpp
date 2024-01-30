@@ -15,16 +15,16 @@ kkot_sender::kkot_sender() {
   u64 inputBitCount = 128;
   mInputByteCount = (inputBitCount + 7) / 8;
   mGens.resize(128 * KKOT_WIDTH_X);
-  _N = 16;
+  //   _N = 16;
 }
-kkot_sender::kkot_sender(const config_param& param, int N) {
+kkot_sender::kkot_sender(const config_param& param) {
   _param = param;
   // hash 先不配置
   u64 statSecParam = 40;
   u64 inputBitCount = 128;
   mInputByteCount = (inputBitCount + 7) / 8;
   mGens.resize(128 * KKOT_WIDTH_X);
-  _N = N;
+  //   _N = N;
 }
 kkot_sender::~kkot_sender() {
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "~kkot_sender");
@@ -226,14 +226,15 @@ int kkot_sender::_encode(int otIdx, oc::block* dest, int choice_id) {
   return 0;
 }
 
-int kkot_sender::encode_all(int num_otext, vector<vector<block>>& out_mask) {
+int kkot_sender::encode_all(int num_otext, int N,
+                            vector<vector<block>>& out_mask) {
   out_mask.resize(num_otext);
   //   if (num_otext != inputs.size()) return -100;
   for (auto i = 0; i < num_otext; ++i) {
     // int input_num_i = inputs[i].size();
-    out_mask[i].resize(_N);
+    out_mask[i].resize(N);
     oc::block* begin = (oc::block*)out_mask[i].data();
-    for (auto j = 0; j < _N; ++j) {
+    for (auto j = 0; j < N; ++j) {
       //   *(begin + j) = oc::toBlock(j);
       _encode(i, begin + j, j);
     }
@@ -242,16 +243,16 @@ int kkot_sender::encode_all(int num_otext, vector<vector<block>>& out_mask) {
 }
 
 int kkot_sender::send(conn* sock, const std::vector<std::vector<uint8_t>>& data,
-                      int bit_l) {
+                      int N, int bit_l) {
   assert(bit_l > 0);
   assert(bit_l <= 8);
   int num_otext = data.size();
   this->recv_correction(sock, num_otext);
   vector<vector<block>> out_masks;
-  this->encode_all(num_otext, out_masks);
+  this->encode_all(num_otext, N, out_masks);
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "kkot_sender kkot pre end out_masks.size:{},N:{}",
-                     out_masks.size(), _N);
+                     out_masks.size(), N);
   //   bit_l 表示发送的数据的有效 bit 长度
   //   int all_bit_len = bit_l * _N * num_otext;
   //   need bytes
@@ -259,13 +260,13 @@ int kkot_sender::send(conn* sock, const std::vector<std::vector<uint8_t>>& data,
   //   string buff(all_bytes_size, '\0');
   //   int
   stringstream ssbuff;
-  int min_num = (_N * bit_l + 7) / 8;
+  int min_num = (N * bit_l + 7) / 8;
   cout << "=== min_num:" << min_num << endl;
   uint8_t tmp[min_num];
   uint8_t mask = (1 << bit_l) - 1;
   for (size_t i = 0; i < num_otext; i++) {
     memset(tmp, 0, min_num);
-    for (size_t j = 0; j < _N; j++) {
+    for (size_t j = 0; j < N; j++) {
       //   int b_index = j * bit_l / 8;
       //   int bit_index = j * bit_l % 8;
       //   uint8_t key = (*(uint8_t*)&out_masks[i][j]) & mask;
@@ -311,17 +312,17 @@ kkot_receiver::kkot_receiver() {
   mInputByteCount = (inputBitCount + 7) / 8;
   auto count = 128 * KKOT_WIDTH_X;
   mGens.resize(count);
-  _N = 16;
+  //   _N = 16;
 }
 
-kkot_receiver::kkot_receiver(const config_param& param, int N) {
+kkot_receiver::kkot_receiver(const config_param& param) {
   _param = param;
   u64 statSecParam = 40;
   u64 inputBitCount = 128;
   mInputByteCount = (inputBitCount + 7) / 8;
   auto count = 128 * KKOT_WIDTH_X;
   mGens.resize(count);
-  _N = 16;
+  //   _N = N;
 }
 kkot_receiver::~kkot_receiver() {
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "~kkot_receiver");
@@ -535,7 +536,7 @@ int kkot_receiver::encode_all(int numOTExt, const vector<int>& r_i,
 }
 
 int kkot_receiver::recv(conn* sock, const std::vector<int>& r_i,
-                        std::vector<uint8_t>& out_data, int bit_l) {
+                        std::vector<uint8_t>& out_data, int N, int bit_l) {
   int numOTExt = r_i.size();
   out_data.resize(numOTExt, 0);
   vector<block> out_masks;
@@ -544,7 +545,7 @@ int kkot_receiver::recv(conn* sock, const std::vector<int>& r_i,
   string buff = sock->recv();
   cout << ">>>>>>>>>buff.size:" << buff.size() << endl;
 
-  int min_num = (_N * bit_l + 7) / 8;
+  int min_num = (N * bit_l + 7) / 8;
   uint8_t tmp[min_num];
   uint8_t mask = (1 << bit_l) - 1;
   int offset = 0;

@@ -21,18 +21,19 @@ class kkot_sender {
   bool _has_base_ot = false;
   int _init(int numOTExt);
   int _encode(int otIdx, oc::block* dest, int choice_id);
-  int _N = 16;
+  //   int _N = 16;
 
  public:
   kkot_sender();
-  kkot_sender(const config_param& param, int N);
+  kkot_sender(const config_param& param);
   ~kkot_sender();
   int get_base_ot_count();
   int set_base_ot(const oc::BitVector& base_choices,
                   const std::vector<oc::block>& base_single_keys);
   int recv_correction(conn* sock, int num_otext);
-  int encode_all(int num_otext, std::vector<std::vector<oc::block>>& out_mask);
-  int send(conn* sock, const std::vector<std::vector<uint8_t>>& data,
+  int encode_all(int num_otext, int N,
+                 std::vector<std::vector<oc::block>>& out_mask);
+  int send(conn* sock, const std::vector<std::vector<uint8_t>>& data, int N,
            int bit_l);
 };
 /////////////////
@@ -46,14 +47,14 @@ class kkot_receiver {
   //   oc::MultiKeyAES<KKOT_WIDTH_X> mMultiKeyAES;
   oc::Matrix<oc::block> mT0, mT1;
   oc::u64 mCorrectionIdx;
-  int _N = 16;
+  //   int _N = 16;
   bool _has_base_ot = false;
   int _init(int numOTExt);
   int _encode(int otIdx, oc::block* dest, int choice_id);
 
  public:
   kkot_receiver();
-  kkot_receiver(const config_param& param, int N);
+  kkot_receiver(const config_param& param);
   ~kkot_receiver();
   int get_base_ot_count();
   int set_base_ot(const std::vector<std::array<oc::block, 2>>& base_pair_keys);
@@ -61,7 +62,7 @@ class kkot_receiver {
                  std::vector<oc::block>& out_mask, conn* sock);
   int send_correction(conn* sock, int sendCount);
   int recv(conn* sock, const std::vector<int>& r_i,
-           std::vector<uint8_t>& out_data, int bit_l);
+           std::vector<uint8_t>& out_data, int N, int bit_l);
 };
 const static uint64_t WH_Code[256][8] = {
     {0xff4698f03ff6260c, 0xee3723cd83824cac, 0xcd771b82e1f8e806,

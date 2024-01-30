@@ -12,7 +12,8 @@ void test_kkot_sender(int num_ot, vector<vector<block>>& out_masks,
                       config_param& param) {
   int numOTExt = num_ot;
   connection c(0, "127.0.0.1", 9001);
-  kkot_sender kkot(param, 16);
+  int N = 16;
+  kkot_sender kkot(param);
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "kkot_sender create");
 #if 0
   int base_ot_num = kkot.get_base_ot_count();
@@ -31,7 +32,7 @@ void test_kkot_sender(int num_ot, vector<vector<block>>& out_masks,
   kkot.set_base_ot(base_choices, single_keys);
 #endif
   kkot.recv_correction(&c, numOTExt);
-  kkot.encode_all(numOTExt, out_masks);
+  kkot.encode_all(numOTExt, N, out_masks);
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "kkot sender sendBytes:{} B",
                      (&c)->send_bytes_count());
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "kkot sender recvBytes:{} B",
@@ -42,7 +43,7 @@ void test_kkot_receiver(const vector<int>& choices, vector<block>& out_masks,
                         config_param& param) {
   int numOTExt = choices.size();
   connection c(1, "127.0.0.1", 9001);
-  kkot_receiver kkot(param, 16);
+  kkot_receiver kkot(param);
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "kkrt_receiver create");
 
 #if 0
@@ -131,7 +132,7 @@ void test_kkot_sender2(int num_ot, vector<vector<uint8_t>>& in_data,
                        config_param& param, int N, int bit_l) {
   int numOTExt = num_ot;
   connection c(0, "127.0.0.1", 9001);
-  kkot_sender kkot(param, N);
+  kkot_sender kkot(param);
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "kkot_sender create");
 #if 0
   int base_ot_num = kkot.get_base_ot_count();
@@ -149,7 +150,7 @@ void test_kkot_sender2(int num_ot, vector<vector<uint8_t>>& in_data,
 
   kkot.set_base_ot(base_choices, single_keys);
 #endif
-  kkot.send(&c, in_data, bit_l);
+  kkot.send(&c, in_data, N, bit_l);
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "kkot sender sendBytes:{} B",
                      (&c)->send_bytes_count());
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "kkot sender recvBytes:{} B",
@@ -160,7 +161,7 @@ void test_kkot_receiver2(const vector<int>& r_i, vector<uint8_t>& out_data,
                          config_param& param, int N, int bit_l) {
   //   int numOTExt = choices.size();
   connection c(1, "127.0.0.1", 9001);
-  kkot_receiver kkot(param, N);
+  kkot_receiver kkot(param);
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "kkrt_receiver create");
 
 #if 0
@@ -176,7 +177,7 @@ void test_kkot_receiver2(const vector<int>& r_i, vector<uint8_t>& out_data,
   //
   kkot.set_base_ot(pair_keys);
 #endif
-  kkot.recv(&c, r_i, out_data, bit_l);
+  kkot.recv(&c, r_i, out_data, N, bit_l);
   //  解密
 
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "kkot recver sendBytes:{} B",
