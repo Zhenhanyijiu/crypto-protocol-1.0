@@ -33,10 +33,6 @@ class kkot_sender {
   int recv_correction(conn* sock, int num_otext);
   int encode_all(int num_otext, int N,
                  std::vector<std::vector<oc::block>>& out_mask);
-  int send(conn* sock, const std::vector<std::vector<uint8_t>>& data, int N,
-           int bit_l);
-  int send(conn* sock, const std::vector<std::vector<uint64_t>>& data, int N,
-           int bit_l);
 };
 /////////////////
 class kkot_receiver {
@@ -63,10 +59,6 @@ class kkot_receiver {
   int encode_all(int numOTExt, const std::vector<int>& r_i,
                  std::vector<oc::block>& out_mask, conn* sock);
   int send_correction(conn* sock, int sendCount);
-  int recv(conn* sock, const std::vector<int>& r_i,
-           std::vector<uint8_t>& out_data, int N, int bit_l);
-  int recv(conn* sock, const std::vector<int>& r_i,
-           std::vector<uint64_t>& out_data, int N, int bit_l);
 };
 const static uint64_t WH_Code[256][8] = {
     {0xff4698f03ff6260c, 0xee3723cd83824cac, 0xcd771b82e1f8e806,

@@ -103,5 +103,87 @@ extern std::unique_ptr<ote_receiver> new_ote_receiver(
 //     base_ote_sender_map;
 // extern std::unordered_map<std::string, NewBaseOtSenderFunc>*
 //     base_ote_receiver_map;
+template <typename T>
+T get_mask_l(int bit_l) {
+  return bit_l == sizeof(T) * 8 ? -1 : (T(1) << bit_l) - 1;
+}
+
+/// @brief N选1 OT 包括1oo2-ot 发送真实数据的模板函数
+/// @tparam T: 要发送的数据的存储类型
+/// @param sock: 通信对象
+/// @param data: 要发送的数据
+/// @param N: N选1的 N
+/// @param bit_l: 发送数据的有效bit长度
+/// @param mask_keys: 可以认为是一次性教秘密钥数组
+/// @return
+template <typename T>
+int ot_send(conn* sock, const std::vector<std::vector<T>>& data, int N,
+            int bit_l, const std::vector<std::vector<oc::block>>& mask_keys) {
+  assert(N > 1);
+  assert(bit_l > 0);
+  assert(bit_l <= sizeof(T) * 8);
+  assert(data.size() == mask_keys.size());
+  int num_otext = data.size();
+  std::stringstream ssbuff;
+  int min_num = (N * bit_l + 7) / 8;
+  //   std::cout << "=== min_num:" << min_num << std::endl;
+  uint8_t tmp[min_num];
+  T mask = get_mask_l<T>(bit_l);
+  for (size_t i = 0; i < num_otext; i++) {
+    memset(tmp, 0, min_num);
+    for (size_t j = 0; j < N; j++) {
+      T key = (*(T*)&mask_keys[i][j]) & mask;
+      T x = data[i][j] ^ key;
+      int bit_pos = j * bit_l, shift = 0;
+      for (size_t k = bit_pos; k < bit_pos + bit_l; k++, shift++) {
+        int byte_index = k / 8, bit_index = k % 8;
+        tmp[byte_index] |= ((x >> shift) & 0x1) << bit_index;
+      }
+    }
+    ssbuff << std::string((char*)tmp, min_num);
+  }
+  sock->send(ssbuff.str());
+  //   std::cout << "recv mask:" << (uint64_t)mask << std::endl;
+  return 0;
+}
+
+/// @brief N选1 OT 包括1oo2-ot 接收真实数据的模板函数
+/// @tparam T: 要接收的数据的存储类型
+/// @param sock: 通信对象
+/// @param r_i: 要选择的数据的在对方的索引
+/// @param N: N选1的 N
+/// @param bit_l: 要接收的数据的有效bit长度
+/// @param mask_keys: 可以认为是一次性解密密钥
+/// @param out_data: 要接收的数据
+/// @return
+template <typename T>
+int ot_recv(conn* sock, const std::vector<int>& r_i, int N, int bit_l,
+            const std::vector<oc::block>& mask_keys, std::vector<T>& out_data) {
+  assert(N > 1);
+  assert(bit_l > 0);
+  assert(bit_l <= sizeof(T) * 8);
+  assert(r_i.size() == mask_keys.size());
+  int num_otext = r_i.size();
+  out_data.resize(num_otext, 0ll);
+  std::string buff = sock->recv();
+  if (buff.empty()) return -1;
+  int min_num = (N * bit_l + 7) / 8;
+  uint8_t tmp[min_num];
+  T mask = get_mask_l<T>(bit_l);
+  int offset = 0;
+  for (size_t i = 0; i < num_otext; i++, offset += min_num) {
+    memcpy(tmp, buff.data() + offset, min_num);
+    T key = (*(T*)&mask_keys[i]) & mask;
+    int bit_pos = r_i[i] * bit_l, shift = 0;
+    int byte_index = 0, bit_index = 0;
+    for (size_t k = bit_pos; k < bit_pos + bit_l; k++, shift++) {
+      byte_index = k / 8, bit_index = k % 8;
+      out_data[i] |= T((tmp[byte_index] >> bit_index) & 0x1) << shift;
+    }
+    out_data[i] ^= key;
+  }
+  return 0;
+}
+
 }  // namespace fucrypto
 #endif
