@@ -1,5 +1,5 @@
 #include "crypto-protocol/ot_base.h"
-#include "crypto-protocol/ote_iknp.h"
+#include "crypto-protocol/iknp.h"
 #include "crypto-protocol/fulog.h"
 #include "crypto-protocol/tcpsocket.h"
 #include <bits/stdc++.h>

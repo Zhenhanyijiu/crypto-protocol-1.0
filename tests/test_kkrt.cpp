@@ -1,7 +1,7 @@
 #include "crypto-protocol/tcpsocket.h"
 #include "crypto-protocol/kkrt.h"
 #include "crypto-protocol/fulog.h"
-#include "crypto-protocol/ote_iknp.h"
+#include "crypto-protocol/iknp.h"
 #include "crypto-protocol/utils.h"
 #include <bits/stdc++.h>
 using namespace std;

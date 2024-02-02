@@ -1,6 +1,6 @@
 #include "crypto-protocol/ot_interface.h"
 #include "crypto-protocol/ot_base.h"
-#include "crypto-protocol/ote_iknp.h"
+#include "crypto-protocol/iknp.h"
 #include "crypto-protocol/kkrt.h"
 using namespace oc;
 using namespace std;

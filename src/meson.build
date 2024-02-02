@@ -19,7 +19,7 @@ source_files = files(
   'ecc/fuecc_botan.cpp',  
   'ecc/fuecc.cpp',
   'ot/ot_base.cpp',
-  'ot/ot_iknp.cpp',  
+  'ot/iknp.cpp',  
   'ot/kkrt.cpp',
   'ot/ot_interface.cpp',
   'pke/short_enc.cpp',
