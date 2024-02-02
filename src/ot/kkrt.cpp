@@ -13,7 +13,6 @@ const AES mAesFixedKey2(_mm_set_epi32(0xabcdef37, 0x1bcdef37, 0xbbcdef37,
 kkrt_sender::kkrt_sender() {
   u64 statSecParam = 40;
   u64 inputBitCount = 128;
-  mInputByteCount = (inputBitCount + 7) / 8;
   mGens.resize(128 * KKRT_WIDTH_X);
 }
 kkrt_sender::kkrt_sender(const config_param& param) {
@@ -21,7 +20,6 @@ kkrt_sender::kkrt_sender(const config_param& param) {
   // hash 先不配置
   u64 statSecParam = 40;
   u64 inputBitCount = 128;
-  mInputByteCount = (inputBitCount + 7) / 8;
   mGens.resize(128 * KKRT_WIDTH_X);
 }
 kkrt_sender::~kkrt_sender() {
@@ -35,11 +33,9 @@ int kkrt_sender::set_base_ot(const BitVector& base_choices,
   mBaseChoiceBits = base_choices;  // 512个 0-1
   //   mGens.resize(choices.size());
   mGensBlkIdx.resize(base_choices.size(), 0);
-
   for (u64 i = 0; i < u64(base_single_keys.size()); i++) {
     mGens[i].setKey(base_single_keys[i]);
   }
-
   mChoiceBlks.resize(base_choices.size() / (sizeof(block) * 8));  // 4
   for (u64 i = 0; i < mChoiceBlks.size(); ++i) {
     mChoiceBlks[i] = toBlock(mBaseChoiceBits.data() + (i * sizeof(block)));
@@ -57,38 +53,29 @@ int kkrt_sender::_init(int numOTExt) {
   static const u8 superBlkSize(8);
   // round up
   numOTExt = ((numOTExt + 127) / 128) * 128;
-
   // We need two matrices, one for the senders matrix T^i_{b_i} and
   // one to hold the the correction values. This is sometimes called
   // the u = T0 + T1 + C matrix in the papers.
   mT.resize(numOTExt, mGens.size() / 128);
   // char c;
   // chl.recv(&c, 1);
-
   mCorrectionVals.resize(numOTExt, mGens.size() / 128);
-
   // The receiver will send us correction values, this is the index of
   // the next one they will send.
   mCorrectionIdx = 0;
-
   // we are going to process OTs in blocks of 128 * superblkSize messages.
   u64 numSuperBlocks = (numOTExt / 128 + superBlkSize - 1) / superBlkSize;
-
   // the index of the last OT that we have completed.
   u64 doneIdx = 0;
-
   // a temp that will be used to transpose the sender's matrix
   std::array<std::array<block, superBlkSize>, 128> t;
-
   u64 numCols = mGens.size();
-
   for (u64 superBlkIdx = 0; superBlkIdx < numSuperBlocks; ++superBlkIdx) {
     // compute at what row does the user want use to stop.
     // the code will still compute the transpose for these
     // extra rows, but it is thrown away.
     u64 stopIdx = doneIdx + std::min<u64>(u64(128) * superBlkSize,
                                           mT.bounds()[0] - doneIdx);
-
     // transpose 128 columns at at time. Each column will be 128 * superBlkSize
     // = 1024 bits long.
     for (u64 i = 0; i < numCols / 128; ++i) {
@@ -99,25 +86,21 @@ int kkrt_sender::_init(int numOTExt) {
             ((block*)t.data() + superBlkSize * tIdx));
         mGensBlkIdx[colIdx] += superBlkSize;
       }
-
       // transpose our 128 columns of 1024 bits. We will have 1024 rows,
       // each 128 bits wide.
       sse_transpose128x1024(t);
-
       // This is the index of where we will store the matrix long term.
       // doneIdx is the starting row. i is the offset into the blocks of 128
       // bits.
       // __restrict isn't crucial, it just tells the compiler that this pointer
       // is unique and it shouldn't worry about pointer aliasing.
       block* __restrict mTIter = mT.data() + doneIdx * mT.stride() + i;
-
       for (u64 rowIdx = doneIdx, j = 0; rowIdx < stopIdx; ++j) {
         // because we transposed 1024 rows, the indexing gets a bit weird. But
         // this is the location of the next row that we want. Keep in mind that
         // we had long
         // **contiguous** columns.
         block* __restrict tIter = (((block*)t.data()) + j);
-
         // do the copy!
         for (u64 k = 0; rowIdx < stopIdx && k < 128; ++rowIdx, ++k) {
           *mTIter = *tIter;
@@ -148,7 +131,6 @@ int kkrt_sender::recv_correction(conn* sock, int num_otext) {
     auto ote = new_ote_receiver(_param);
     SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                        "== kkrt_sender new_ote_receiver");
-
     BitVector chs(base_num);
     PRNG rng(sysRandomSeed());
     chs.randomize(rng);
@@ -161,9 +143,6 @@ int kkrt_sender::recv_correction(conn* sock, int num_otext) {
                        "== kkrt_sender _has_base_ot end");
   }
   _init(num_otext);
-#ifndef NDEBUG
-  if (num_otext > mCorrectionVals.bounds()[0] - mCorrectionIdx) return -1;
-#endif  // !NDEBUG
 
   // receive the next OT correction values. This will be several rows of the
   // form u = T0 + T1 + C(w) there c(w) is a pseudo-random code.
@@ -179,7 +158,6 @@ int kkrt_sender::recv_correction(conn* sock, int num_otext) {
          num_otext * sizeof(block) * mCorrectionVals.stride());
   //   chl.recv((u8*)&*dest, recvCount * sizeof(block) *
   //   mCorrectionVals.stride());
-
   // update the index of there we should store the next set of correction
   // values.
   mCorrectionIdx += num_otext;
@@ -188,116 +166,48 @@ int kkrt_sender::recv_correction(conn* sock, int num_otext) {
   on_error_exit.dismiss();
   return 0;
 }
-int kkrt_sender::_encode(int otIdx, const void* input, void* dest,
-                         int destSize) {
-#ifndef NDEBUG
-  if (eq(mCorrectionVals[otIdx][0], ZeroBlock)) return -1000;
-#endif  // !NDEBUG
-        // #define KKRT_WIDTH 4
-  // static const int width(4);
-  block word = ZeroBlock;
-  memcpy(&word, input, mInputByteCount);
-//   std::array<block, KKRT_WIDTH_X> choice{word, word, word, word}, code;
-#if KKRT_WIDTH_X == 2
-  std::array<block, KKRT_WIDTH_X> choice{word, word}, code;
-  mAesFixedKey.ecbEncBlock(choice[0], code[0]);
-  mAesFixedKey2.ecbEncBlock(choice[1], code[1]);
-#else
+int kkrt_sender::_encode(int otIdx, const block* input, block* dest) {
   std::array<block, KKRT_WIDTH_X> choice, code;
-  for (int i = 0; i < KKRT_WIDTH_X; i++) choice[i] = word;
+  for (int i = 0; i < KKRT_WIDTH_X; i++) choice[i] = *input;
   mMultiKeyAES.ecbEncNBlocks(choice.data(), code.data());
-#endif
-
-  //   mAesFixedKey.ecbEncBlocks(choice.data(), mT.stride(), code.data());
 
   auto* corVal = mCorrectionVals.data() + otIdx * mCorrectionVals.stride();
   auto* tVal = mT.data() + otIdx * mT.stride();
 
   // This is the hashing phase. Here we are using pseudo-random codewords.
   // That means we assume inputword is a hash of some sort.
-#if KKRT_WIDTH_X == 4
-  code[0] = code[0] ^ word;
-  code[1] = code[1] ^ word;
-  code[2] = code[2] ^ word;
-  code[3] = code[3] ^ word;
 
-  block t00 = corVal[0] ^ code[0];
-  block t01 = corVal[1] ^ code[1];
-  block t02 = corVal[2] ^ code[2];
-  block t03 = corVal[3] ^ code[3];
-  block t10 = t00 & mChoiceBlks[0];
-  block t11 = t01 & mChoiceBlks[1];
-  block t12 = t02 & mChoiceBlks[2];
-  block t13 = t03 & mChoiceBlks[3];
-
-  code[0] = tVal[0] ^ t10;
-  code[1] = tVal[1] ^ t11;
-  code[2] = tVal[2] ^ t12;
-  code[3] = tVal[3] ^ t13;
-//   cout << "===================4" << endl;
-#elif KKRT_WIDTH_X == 2
-  code[0] = code[0] ^ word;
-  code[1] = code[1] ^ word;
-
-  block t00 = corVal[0] ^ code[0];
-  block t01 = corVal[1] ^ code[1];
-  block t10 = t00 & mChoiceBlks[0];
-  block t11 = t01 & mChoiceBlks[1];
-
-  code[0] = tVal[0] ^ t10;
-  code[1] = tVal[1] ^ t11;
-//   cout << "===================2" << endl;
-#else
   for (u64 i = 0; i < KKRT_WIDTH_X; ++i) {
-    code[i] = code[i] ^ word;
-
+    code[i] = code[i] ^ choice[i];
     block t0 = corVal[i] ^ code[i];
     block t1 = t0 & mChoiceBlks[i];
-
     code[i] = tVal[i] ^ t1;
   }
-#endif
+
   if (_hash) {
     _hash->hasher_reset();
     _hash->hasher_update((char*)code.data(), sizeof(block) * mT.stride());
     _hash->hasher_final((char*)dest, 16);
-    // RandomOracle sha1(destSize);
-    // // hash it all to get rid of the correlation.
-    // sha1.Update((u8*)code.data(), sizeof(block) * mT.stride());
-    // sha1.Final((u8*)dest);
     return 0;
   }
-  // 使用 aes
-  //   std::array<block, KKRT_WIDTH_X> aesBuff;
-  //   mAesFixedKey.ecbEncBlocks(code.data(), mT.stride(), aesBuff.data());
   auto val = ZeroBlock;
-#if KKRT_WIDTH_X == 2
-  //   val = val ^ code[0] ^ aesBuff[0];
-  //   val = val ^ code[1] ^ aesBuff[1];
-
-  val = code[0] ^ code[1];
-
-#else
-  //   for (u64 i = 0; i < mT.stride(); ++i) val = val ^ code[i] ^ aesBuff[i];
   for (u64 i = 0; i < mT.stride(); ++i) val = val ^ code[i];
-#endif
-  //   memcpy(dest, (char*)&val, std::min(destSize, sizeof(block)));
   memcpy(dest, (char*)&val, sizeof(block));
   return 0;
 }
 
-int kkrt_sender::encode_all(int num_otext,
-                            const vector<vector<uint32_t>>& inputs,
+int kkrt_sender::encode_all(int num_otext, const vector<vector<block>>& inputs,
                             vector<vector<block>>& out_mask) {
   out_mask.resize(num_otext);
-  if (num_otext != inputs.size()) return -100;
+  if (num_otext != inputs.size()) return err_code_kkrt;
   for (auto i = 0; i < num_otext; ++i) {
     int input_num_i = inputs[i].size();
     out_mask[i].resize(input_num_i);
-    oc::block* begin = (oc::block*)out_mask[i].data();
+    oc::block* begin = (oc::block*)inputs[i].data();
+    oc::block* begin2 = (oc::block*)out_mask[i].data();
     for (auto j = 0; j < input_num_i; ++j) {
-      *(begin + j) = oc::toBlock(inputs[i][j]);
-      _encode(i, begin + j, begin + j, 16);
+      //   *(begin + j) = oc::toBlock(inputs[i][j]);
+      _encode(i, begin + j, begin2 + j);
     }
   }
   return 0;
@@ -307,7 +217,6 @@ int kkrt_sender::encode_all(int num_otext,
 kkrt_receiver::kkrt_receiver() {
   u64 statSecParam = 40;
   u64 inputBitCount = 128;
-  mInputByteCount = (inputBitCount + 7) / 8;
   auto count = 128 * KKRT_WIDTH_X;
   mGens.resize(count);
 }
@@ -316,7 +225,6 @@ kkrt_receiver::kkrt_receiver(const config_param& param) {
   _param = param;
   u64 statSecParam = 40;
   u64 inputBitCount = 128;
-  mInputByteCount = (inputBitCount + 7) / 8;
   auto count = 128 * KKRT_WIDTH_X;
   mGens.resize(count);
 }
@@ -344,30 +252,24 @@ int kkrt_receiver::_init(int numOtExt) {
   mMultiKeyAES.setKeys(keys);
   ///////
   static const u64 superBlkSize(8);
-
   // this will be used as temporary buffers of 128 columns,
   // each containing 1024 bits. Once transposed, they will be copied
   // into the T1, T0 buffers for long term storage.
   std::array<std::array<block, superBlkSize>, 128> t0;
   std::array<std::array<block, superBlkSize>, 128> t1;
-
   // we are going to process OTs in blocks of 128 * superblkSize messages.
   u64 numSuperBlocks =
       ((numOtExt + 127) / 128 + superBlkSize - 1) / superBlkSize;
   u64 numCols = mGens.size();
-
   // We need two matrices, T0 and T1. These will hold the expanded and
   // transposed rows that we got the using the base OTs as PRNG seed.
   mT0.resize(numOtExt, numCols / 128);
   mT1.resize(numOtExt, numCols / 128);
-
   // The is the index of the last correction value u = T0 ^ T1 ^ c(w)
   // that was sent to the sender.
   mCorrectionIdx = 0;
-
   // the index of the OT that has been completed.
   u64 doneIdx = 0;
-
   // NOTE: We do not transpose a bit-matrix of size numCol * numCol.
   //   Instead we break it down into smaller chunks. We do 128 columns
   //   times 8 * 128 rows at a time, where 8 = superBlkSize. This is done for
@@ -380,7 +282,6 @@ int kkrt_receiver::_init(int numOtExt) {
     // extra rows, but it is thrown away.
     u64 stopIdx =
         doneIdx + std::min<u64>(u64(128) * superBlkSize, numOtExt - doneIdx);
-
     for (u64 i = 0; i < numCols / 128; ++i) {
       for (u64 tIdx = 0, colIdx = i * 128; tIdx < 128; ++tIdx, ++colIdx) {
         // generate the column indexed by colIdx. This is done with
@@ -393,16 +294,13 @@ int kkrt_receiver::_init(int numOtExt) {
         mGens[colIdx][1].ecbEncCounterMode(
             mGensBlkIdx[colIdx], superBlkSize,
             ((block*)t1.data() + superBlkSize * tIdx));
-
         // increment the counter mode idx.
         mGensBlkIdx[colIdx] += superBlkSize;
       }
-
       // transpose our 128 columns of 1024 bits. We will have 1024 rows,
       // each 128 bits wide.
       sse_transpose128x1024(t0);
       sse_transpose128x1024(t1);
-
       // This is the index of where we will store the matrix long term.
       // doneIdx is the starting row. i is the offset into the blocks of 128
       // bits.
@@ -410,7 +308,6 @@ int kkrt_receiver::_init(int numOtExt) {
       // is unique and it shouldn't worry about pointer aliasing.
       block* __restrict mT0Iter = mT0.data() + mT0.stride() * doneIdx + i;
       block* __restrict mT1Iter = mT1.data() + mT1.stride() * doneIdx + i;
-
       for (u64 rowIdx = doneIdx, j = 0; rowIdx < stopIdx; ++j) {
         // because we transposed 1024 rows, the indexing gets a bit weird. But
         // this is the location of the next row that we want. Keep in mind that
@@ -418,78 +315,40 @@ int kkrt_receiver::_init(int numOtExt) {
         // **contiguous** columns.
         block* __restrict t0Iter = ((block*)t0.data()) + j;
         block* __restrict t1Iter = ((block*)t1.data()) + j;
-
         // do the copy!
         for (u64 k = 0; rowIdx < stopIdx && k < 128; ++rowIdx, ++k) {
           *mT0Iter = *(t0Iter);
           *mT1Iter = *(t1Iter);
-
           t0Iter += superBlkSize;
           t1Iter += superBlkSize;
-
           mT0Iter += mT0.stride();
           mT1Iter += mT0.stride();
         }
       }
     }
-
     doneIdx = stopIdx;
   }
   return 0;
 }
 
-int kkrt_receiver::_encode(int otIdx, const void* input, void* dest,
-                           int destSize) {
-//   static const int width(4);
-#ifndef NDEBUG
-  if (mT0.stride() != KKRT_WIDTH_X) return -1002;
-  // if (choice.size() != mT0.stride())
-  //     throw std::invalid_argument("");
-  if (eq(mT0[otIdx][0], ZeroBlock)) return -1000;
-  if (eq(mT0[otIdx][0], AllOneBlock)) return -1001;
-#endif  // !NDEBUG
-
+int kkrt_receiver::_encode(int otIdx, const block* input, block* dest) {
   block* t0Val = mT0.data() + mT0.stride() * otIdx;
   block* t1Val = mT1.data() + mT0.stride() * otIdx;
-
   // 128 bit input restriction
-  block word = ZeroBlock;
-  memcpy(&word, input, mInputByteCount);
-
   // run the input word through AES to get a psuedo-random codeword. Then
   // XOR the input with the AES output.
-  //   std::array<block, KKRT_WIDTH_X> choice{word, word, word, word}, code;
-
-#if KKRT_WIDTH_X == 2
-  std::array<block, KKRT_WIDTH_X> choice{word, word}, code;
-  mAesFixedKey.ecbEncBlock(choice[0], code[0]);
-  mAesFixedKey2.ecbEncBlock(choice[1], code[1]);
-#else
   std::array<block, KKRT_WIDTH_X> choice, code;
-  for (int i = 0; i < KKRT_WIDTH_X; i++) choice[i] = word;
+  for (int i = 0; i < KKRT_WIDTH_X; i++) choice[i] = *input;
   mMultiKeyAES.ecbEncNBlocks(choice.data(), code.data());
-
-#endif
-  //   mAesFixedKey.ecbEncBlocks(choice.data(), KKRT_WIDTH_X, code.data());
-
-// encode the correction value as u = T0 + T1 + c(w), there c(w) is a
-// pseudo-random codeword.
-#if KKRT_WIDTH_X == 2
-  //
-  code[0] = code[0] ^ choice[0];
-  code[1] = code[1] ^ choice[1];
-  t1Val[0] = code[0] ^ t0Val[0] ^ t1Val[0];
-  t1Val[1] = code[1] ^ t0Val[1] ^ t1Val[1];
-#else
+  // encode the correction value as u = T0 + T1 + c(w), there c(w) is a
+  // pseudo-random codeword.
   for (u64 i = 0; i < KKRT_WIDTH_X; ++i) {
     // final code is the output of AES plus the input
     code[i] = code[i] ^ choice[i];
-
     // reuse mT1 as the place we store the correlated value.
     // this will later get sent to the sender.
     t1Val[i] = code[i] ^ t0Val[i] ^ t1Val[i];
   }
-#endif
   if (_hash) {
     _hash->hasher_reset();
     _hash->hasher_update((char*)mT0[otIdx].data(),
@@ -499,34 +358,13 @@ int kkrt_receiver::_encode(int otIdx, const void* input, void* dest,
     // std::array<block, KKRT_WIDTH_X> aesBuff;
     // mAesFixedKey.ecbEncBlocks(t0Val, mT0.stride(), aesBuff.data());
     oc::block val = ZeroBlock;
-#if KKRT_WIDTH_X == 2
-    // val = val ^ aesBuff[0] ^ t0Val[0];
-    // val = val ^ aesBuff[1] ^ t0Val[1];
-
-    val = t0Val[0] ^ t0Val[1];
-#else
-    // for (u64 i = 0; i < mT0.stride(); ++i) val = val ^ aesBuff[i] ^ t0Val[i];
     for (u64 i = 0; i < mT0.stride(); ++i) val = val ^ t0Val[i];
-#endif
     memcpy(dest, &val, 16);
-    // cout << ">>>>>>>>>>>>kkrt_receiver hash is null" << endl;
   }
-
-#ifndef NDEBUG
-  // a debug check to mark this OT as used and ready to send.
-  mT0[otIdx][0] = AllOneBlock;
-#endif
   return 0;
 }
 
 int kkrt_receiver::send_correction(conn* sock, int sendCount) {
-#ifndef NDEBUG
-  // make sure these OTs all contain valid correction values, aka encode has
-  // been called.
-  for (u64 i = mCorrectionIdx; i < mCorrectionIdx + sendCount; ++i)
-    if (neq(mT0[i][0], AllOneBlock)) return -2000;
-#endif
-
   // this is potentially dangerous. We dont have a guarantee that mT1 will still
   // exist when the network gets around to sending this. Oh well.
   sock->send(string((char*)(mT1.data() + (mCorrectionIdx * mT1.stride())),
@@ -536,12 +374,11 @@ int kkrt_receiver::send_correction(conn* sock, int sendCount) {
   //       chl.asyncSendFuture((u8*)(mT1.data() + (mCorrectionIdx *
   //       mT1.stride())),
   //                           mT1.stride() * sendCount * sizeof(block));
-
   mCorrectionIdx += sendCount;
   return 0;
 }
 
-int kkrt_receiver::encode_all(int numOTExt, const vector<uint32_t>& inputs,
+int kkrt_receiver::encode_all(int numOTExt, const vector<block>& inputs,
                               vector<block>& out_mask, conn* sock) {
   if (!_has_base_ot) {
     int base_ot_num = get_base_ot_count();
@@ -561,10 +398,11 @@ int kkrt_receiver::encode_all(int numOTExt, const vector<uint32_t>& inputs,
   }
   _init(numOTExt);
   out_mask.resize(numOTExt);
-  auto begin = out_mask.data();
+  auto begin = inputs.data();
+  auto begin2 = out_mask.data();
   for (auto k = 0ull; k < numOTExt; ++k) {
-    *(begin + k) = oc::toBlock(inputs[k]);
-    _encode(k, begin + k, begin + k, 16);
+    // *(begin + k) = oc::toBlock(inputs[k]);
+    _encode(k, begin + k, begin2 + k);
   }
   return 0;
 }

@@ -8,7 +8,7 @@ using namespace std;
 using namespace oc;
 using namespace fucrypto;
 
-void test_kkrt_sender(const vector<vector<u32>>& inputs,
+void test_kkrt_sender(const vector<vector<block>>& inputs,
                       vector<vector<block>>& out_masks, config_param& param) {
   int numOTExt = inputs.size();
   connection c(0, "127.0.0.1", 9001);
@@ -38,7 +38,7 @@ void test_kkrt_sender(const vector<vector<u32>>& inputs,
                      (&c)->recv_bytes_count());
 }
 
-void test_kkrt_receiver(const vector<u32>& choices, vector<block>& out_masks,
+void test_kkrt_receiver(const vector<block>& choices, vector<block>& out_masks,
                         config_param& param) {
   int numOTExt = choices.size();
   connection c(1, "127.0.0.1", 9001);
@@ -76,15 +76,18 @@ int main_test(int argc, char** argv) {
   config_param param;
   param.hasher_name = "blake3";
   //   ;
-  vector<vector<u32>> inputs(num_Ote);
+  vector<vector<block>> inputs(num_Ote);
   for (size_t i = 0; i < num_Ote; i++) {
     for (size_t j = 0; j < N; j++) {
-      inputs[i].push_back(j);
+      inputs[i].push_back(toBlock(rand(), rand()));
     }
   }
-  vector<u32> choices(num_Ote);
+  vector<block> choices(num_Ote);
+  vector<u32> choices_id(num_Ote);
   for (size_t i = 0; i < num_Ote; i++) {
-    choices[i] = rand() % N;
+    int j = rand() % N;
+    choices_id[i] = j;
+    choices[i] = inputs[i][j];
   }
   time_point tp;
   //
@@ -103,11 +106,12 @@ int main_test(int argc, char** argv) {
       for (size_t j = 0; j < N; j++) {
         cout << "[" << j << "]" << out_masks[i][j] << endl;
       }
-      cout << "[" << choices[i] << "]" << out_dec_masks[i] << endl;
-      cout << "[" << choices[i] << "]" << out_masks[i][choices[i]] << endl;
+      cout << "[" << choices_id[i] << "]" << out_dec_masks[i] << endl;
+      cout << "[" << choices_id[i] << "]" << out_masks[i][choices_id[i]]
+           << endl;
       cout << endl;
     }
-    if (neq(out_dec_masks[i], out_masks[i][choices[i]]))
+    if (neq(out_dec_masks[i], out_masks[i][choices_id[i]]))
       cout << "check not ok" << endl;
     // return 0;
   }
