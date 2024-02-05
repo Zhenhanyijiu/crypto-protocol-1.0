@@ -4,6 +4,9 @@
 #include "crypto-protocol/iknp.h"
 #include "crypto-protocol/utils.h"
 #include <bits/stdc++.h>
+// #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+// #include <doctest/doctest.h>
+
 using namespace std;
 using namespace oc;
 using namespace fucrypto;
@@ -121,7 +124,20 @@ int main_test(int argc, char** argv) {
 }
 
 int main(int argc, char** argv) {
-  SPDLOG_LOGGER_INFO(spdlog::default_logger(), "=== test kkrt ===");
   main_test(argc, argv);
   return 0;
 }
+
+// int add(int x, int y) {
+//   //   CHECK(1 == 10);
+//   ;
+//   return x + y;
+// }
+// TEST_CASE("TEST CASE TEST") {
+//   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "=== test kkrt ===");
+//   //   CHECK(1 == 1);
+//   //   main_test(argc, argv);
+//   //   for (size_t i = 0; i < 10; i++) {
+//   //     CHECK(add(1, 4) == 5);
+//   //   }
+// }

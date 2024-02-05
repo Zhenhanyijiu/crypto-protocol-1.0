@@ -3,7 +3,7 @@
 #include "crypto-protocol/ot_interface.h"
 #include "cryptoTools/Common/Matrix.h"
 #include "crypto-protocol/hasher.h"
-#define KKRT_WIDTH_X 4  // 设置为2,通信变少
+#define KKRT_WIDTH_X 2  // 设置为2,通信变少
 namespace fucrypto {
 #define err_code_kkrt 1002
 class kkrt_sender {
@@ -12,7 +12,6 @@ class kkrt_sender {
   std::unique_ptr<hasher> _hash = nullptr;
   std::vector<oc::AES> mGens;
   oc::u64 mCorrectionIdx;
-  //   oc::u64 mInputByteCount;
   oc::BitVector mBaseChoiceBits;
   std::vector<oc::u64> mGensBlkIdx;
   std::vector<oc::block> mChoiceBlks;
@@ -41,7 +40,6 @@ class kkrt_receiver {
   std::unique_ptr<hasher> _hash = nullptr;
   std::vector<std::array<oc::AES, 2>> mGens;
   std::vector<oc::u64> mGensBlkIdx;
-  //   oc::u64 mInputByteCount;
   oc::MultiKeyAES<KKRT_WIDTH_X> mMultiKeyAES;
   oc::Matrix<oc::block> mT0, mT1;
   oc::u64 mCorrectionIdx;
