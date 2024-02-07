@@ -86,7 +86,12 @@ executable('test_botan', 'test_botan.cpp',
   dependencies: crypto_dependencies)
 
 
-  executable('test_kkot', 'test_kkot.cpp',
+executable('test_kkot', 'test_kkot.cpp',
+  include_directories: includes,
+  cpp_args: crypto_compile_args,
+  dependencies: crypto_dependencies)
+
+executable('test_batchpir', 'test_batchpir.cpp',
   include_directories: includes,
   cpp_args: crypto_compile_args,
   dependencies: crypto_dependencies)

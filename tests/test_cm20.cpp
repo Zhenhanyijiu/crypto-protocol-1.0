@@ -5,17 +5,18 @@
 #include "cryptoTools/Common/Defines.h"
 #include <bits/stdc++.h>
 using namespace std;
+using namespace oc;
 using namespace fucrypto;
 struct param {
   string common_seed = "0123456789abcdef";
-  oc::u64 sender_size = 100000;
+  oc::u64 sender_size = 1000000;
   oc::u64 matrix_width = 128;
-  oc::u64 logHeight = 20;
-  int threadNum = 1;
-  oc::u64 hash2LengthInBytes = 10;
+  oc::u64 log_height = 20;
+  int thread_num = 1;
+  oc::u64 hash2_length_in_bytes = 10;
   //   oc::u64 bucket2ForComputeH2Output = 256;
-  oc::u64 bucket2_send_hash = 2000000;
-  oc::u64 recver_size = 3100;
+  oc::u64 bucket2_send_hash = 200000;
+  oc::u64 recver_size = 10000;
 };
 param default_param;
 void get_data(vector<block> &senderSet, vector<block> &recverSet) {
@@ -34,9 +35,9 @@ void get_data(vector<block> &senderSet, vector<block> &recverSet) {
 static void run_cm20_sender(vector<block> &senderSet) {
   connection c(1, "127.0.0.1", 9300);
   cm20_sender cm20sender(default_param.common_seed, default_param.sender_size,
-                         default_param.matrix_width, default_param.logHeight,
-                         default_param.threadNum,
-                         default_param.hash2LengthInBytes,
+                         default_param.matrix_width, default_param.log_height,
+                         default_param.thread_num,
+                         default_param.hash2_length_in_bytes,
                          default_param.bucket2_send_hash);
   cm20sender.recover_matrix_c(&c, senderSet);
 
@@ -51,8 +52,8 @@ static void run_cm20_recver(vector<block> &recverSet) {
   auto receiverSize = recverSet.size();
   cm20_receiver cm20recver(
       default_param.common_seed, receiverSize, default_param.sender_size,
-      default_param.matrix_width, default_param.logHeight,
-      default_param.threadNum, default_param.hash2LengthInBytes,
+      default_param.matrix_width, default_param.log_height,
+      default_param.thread_num, default_param.hash2_length_in_bytes,
       default_param.bucket2_send_hash);
   cm20recver.gen_matrix_u_a_d(&c, recverSet);
   //   cout << "============== 3" << endl;
@@ -89,9 +90,9 @@ static void test_cm20_psi() {
 static void run_cm20_sender_pir(vector<block> &senderSet) {
   connection c(1, "127.0.0.1", 9300);
   cm20_sender cm20sender(default_param.common_seed, default_param.sender_size,
-                         default_param.matrix_width, default_param.logHeight,
-                         default_param.threadNum,
-                         default_param.hash2LengthInBytes,
+                         default_param.matrix_width, default_param.log_height,
+                         default_param.thread_num,
+                         default_param.hash2_length_in_bytes,
                          default_param.bucket2_send_hash);
   cm20sender.recover_matrix_c(&c, senderSet);
   //   cout << "============== 1" << endl;
@@ -103,8 +104,8 @@ static void run_cm20_recver_pir(vector<block> &recverSet) {
   auto receiverSize = recverSet.size();
   cm20_receiver cm20recver(
       default_param.common_seed, receiverSize, default_param.sender_size,
-      default_param.matrix_width, default_param.logHeight,
-      default_param.threadNum, default_param.hash2LengthInBytes,
+      default_param.matrix_width, default_param.log_height,
+      default_param.thread_num, default_param.hash2_length_in_bytes,
       default_param.bucket2_send_hash);
   cm20recver.gen_matrix_u_a_d(&c, recverSet);
   //   cout << "============== 3" << endl;
@@ -144,9 +145,9 @@ static void test_cm20_psi_pir() {
 static void run_cm20_sender_set_base_ot(vector<block> &senderSet) {
   connection c(1, "127.0.0.1", 9300);
   cm20_sender cm20sender(default_param.common_seed, default_param.sender_size,
-                         default_param.matrix_width, default_param.logHeight,
-                         default_param.threadNum,
-                         default_param.hash2LengthInBytes,
+                         default_param.matrix_width, default_param.log_height,
+                         default_param.thread_num,
+                         default_param.hash2_length_in_bytes,
                          default_param.bucket2_send_hash);
 
   PRNG rng(oc::sysRandomSeed());
@@ -171,8 +172,8 @@ static void run_cm20_recver_set_base_ot(vector<block> &recverSet) {
   auto receiverSize = recverSet.size();
   cm20_receiver cm20recver(
       default_param.common_seed, receiverSize, default_param.sender_size,
-      default_param.matrix_width, default_param.logHeight,
-      default_param.threadNum, default_param.hash2LengthInBytes,
+      default_param.matrix_width, default_param.log_height,
+      default_param.thread_num, default_param.hash2_length_in_bytes,
       default_param.bucket2_send_hash);
 
   //
