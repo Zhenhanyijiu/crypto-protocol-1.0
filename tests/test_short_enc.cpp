@@ -32,11 +32,11 @@ int main_test(argv_param& param) {
   time_point tm_point;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "=== init_short_cipher begin time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   short_elgamal::init_short_cipher(c.get(), max_msg_n);
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "=== init_short_cipher end time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   short_elgamal sh_elg;
   //   sh_elg.init_short_cipher(c.get(), msg_n);
   vector<uint32_t> plain(plain_num);
@@ -55,7 +55,7 @@ int main_test(argv_param& param) {
 
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "=== enc_list_fast begin time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   int fg = sh_elg.enc_list_fast(plain, cipher_0, ciphers, pk.get(), c.get());
   if (fg) {
     SPDLOG_LOGGER_ERROR(spdlog::default_logger(), "enc_list_fast error");
@@ -63,7 +63,7 @@ int main_test(argv_param& param) {
   }
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "=== enc_list_fast end time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   for (size_t i = 0; i < 5 && i < ciphers.size(); i++) {
     // cout << "cipher_i:" << i << ",c0:" << cipher_0.size()
     //      << ",c1:" << ciphers[i].size() << endl;
@@ -75,7 +75,7 @@ int main_test(argv_param& param) {
   //
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "=== dec_list_fast begin time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   vector<uint32_t> plain_dec;
   fg = sh_elg.dec_list_fast(cipher_0, ciphers, plain_dec, sk.get(), c.get());
   if (fg) {
@@ -84,14 +84,14 @@ int main_test(argv_param& param) {
   }
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "=== dec_list_fast end time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   //   check
   if (plain.size() != plain_dec.size()) {
     SPDLOG_LOGGER_ERROR(spdlog::default_logger(), "check error");
     return 0;
   }
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "=== check begin time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   for (int i = 0; i < plain.size(); i++) {
     if (plain[i] != plain_dec[i]) {
       SPDLOG_LOGGER_ERROR(spdlog::default_logger(), "check val error i::{}", i);
@@ -99,7 +99,7 @@ int main_test(argv_param& param) {
     }
   }
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "=== check end time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "check ok");
   return 0;
 }
@@ -119,11 +119,11 @@ int main_test_enc_list_cipher_add(argv_param& param) {
   time_point tm_point;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "=== init_short_cipher begin time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   short_elgamal::init_short_cipher(c.get(), max_msg_n);
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "=== init_short_cipher end time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   // pk, ks
   auto pk = c->new_point();
   auto sk = c->gen_rand_bn();
@@ -148,12 +148,12 @@ int main_test_enc_list_cipher_add(argv_param& param) {
   // 密文相加
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "====== enc_list_cipher_add start:{}ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   sh_elg.enc_list_cipher_add(cipher0_vector, cipher1_vector.data(), pk.get(),
                              c.get());
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "====== enc_list_cipher_add end:{}ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
 
   // 解密相加的结果
   vector<uint32_t> plain_dec;
@@ -202,11 +202,11 @@ int main_test_enc_dec_batch(argv_param& param) {
   time_point tm_point;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "=== init_short_cipher begin time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   short_elgamal::init_short_cipher(c.get(), max_msg_n);
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "=== init_short_cipher end time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   // pk, ks
   auto pk = c->new_point();
   auto sk = c->gen_rand_bn();
@@ -220,19 +220,19 @@ int main_test_enc_dec_batch(argv_param& param) {
     plains[i] = uint32_t(rand()) % 2;
   }
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "=== enc_batch begin time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   //   sh_elg.enc_batch(plains, ciphers, pk.get(), c.get());
   sh_elg.enc_batch_by_map(plains, ciphers, pk.get(), c.get());
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "=== enc_batch end time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   // dec_batch
   vector<uint32_t> plains_dec(plain_num);
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "=== dec_batch begin time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   //   sh_elg.dec_batch(ciphers, plains_dec, sk.get(), c.get());
   sh_elg.dec_batch_by_map(ciphers, plains_dec, sk.get(), c.get());
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "=== dec_batch end time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   //  check
   for (size_t i = 0; i < plain_num; i++) {
     if (plains[i] != plains_dec[i]) {
@@ -259,11 +259,11 @@ int main_test_enc_dec_batch_pre_c0(argv_param& param) {
   time_point tm_point;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "=== init_short_cipher begin time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   short_elgamal::init_short_cipher(c.get(), max_msg_n);
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "=== init_short_cipher end time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   // pk, ks
   auto pk = c->new_point();
   auto sk = c->gen_rand_bn();
@@ -280,7 +280,7 @@ int main_test_enc_dec_batch_pre_c0(argv_param& param) {
   auto t = c->new_bn();
   auto tG = c->new_point();
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "=== tG begin time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   for (size_t i = 0; i < plain_num; i++) {
     c->gen_rand_bn(t.get());
     c->scalar_base_mul(t.get(), tG.get());
@@ -288,35 +288,35 @@ int main_test_enc_dec_batch_pre_c0(argv_param& param) {
     ciphers[i][0] = tG->to_bin();
   }
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "=== tG end time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
 
   auto G = c->get_generator();
   auto rt = c->gen_rand_bn();
   auto rtG = c->new_point();
   c->scalar_base_mul(rt.get(), rtG.get());
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "=== ADD G begin time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   for (size_t i = 0; i < plain_num; i++) {
     c->add(G.get(), rtG.get());
   }
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "=== ADD G end time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "=== enc_batch_pre_c0 begin time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   //   sh_elg.enc_batch(plains, ciphers, pk.get(), c.get());
   sh_elg.enc_batch_pre_c0(plains, t_list, ciphers, pk.get(), c.get());
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "=== enc_batch_pre_c0 end time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   // dec_batch
   vector<uint32_t> plains_dec(plain_num);
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "=== dec_batch begin time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   //   sh_elg.dec_batch(ciphers, plains_dec, sk.get(), c.get());
   sh_elg.dec_batch_by_map(ciphers, plains_dec, sk.get(), c.get());
   SPDLOG_LOGGER_INFO(spdlog::default_logger(), "=== dec_batch end time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   //  check
   for (size_t i = 0; i < plain_num; i++) {
     if (plains[i] != plains_dec[i]) {
@@ -343,11 +343,11 @@ int main_test_batch_cipher_add_pre_c0(argv_param& param) {
   time_point tm_point;
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "=== init_short_cipher begin time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   short_elgamal::init_short_cipher(c.get(), max_msg_n);
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "=== init_short_cipher end time:{} ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   // pk, ks
   auto pk = c->new_point();
   auto sk = c->gen_rand_bn();
@@ -370,11 +370,11 @@ int main_test_batch_cipher_add_pre_c0(argv_param& param) {
   // 密文相加
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "====== enc_list_cipher_add start:{}ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
   sh_elg.batch_cipher_add(cipher_vector, pk.get(), c.get());
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "====== enc_list_cipher_add end:{}ms",
-                     tm_point.get_time_piont_ms());
+                     tm_point.get_time_point_ms());
 
   // 解密相加的结果
   vector<uint32_t> plain_dec;

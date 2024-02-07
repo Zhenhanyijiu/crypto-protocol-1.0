@@ -1,6 +1,7 @@
 #ifndef __FU_CM20_H__
 #define __FU_CM20_H__
 #include "crypto-protocol/config.h"
+#include "crypto-protocol/utils.h"
 #include "crypto-protocol/fusocket.h"
 #include "crypto-protocol/threadpool.h"
 #include "cryptoTools/Common/Defines.h"
@@ -33,6 +34,8 @@ class cm20_sender {
   std::vector<std::vector<oc::u8>> _hash_inputs;
   oc::u64 _low_left;
   config_param _conf;
+  time_point _tp;
+  std::stringstream _ss;
 
  public:
   ~cm20_sender();
@@ -46,6 +49,11 @@ class cm20_sender {
   int send_hash2_output(conn *sock);
   int get_count() {
     return (_sender_size + _bucket2_send_hash - 1) / _bucket2_send_hash;
+  };
+  std::string get_time_point_info() {
+    _ss.clear(), _ss.str("");
+    _ss << " [time]:" << _tp.get_time_point_ms() << " ms";
+    return _ss.str();
   };
 };
 void transform_input_to_block(const std::vector<std::string> &data_set_input,
@@ -81,6 +89,8 @@ class cm20_receiver {
   std::vector<std::vector<std::vector<oc::u32>>> _psi_result_pir;
   std::vector<std::future<oc::u32>> _psi_result_index;
   int gen_hash_map();
+  time_point _tp;
+  std::stringstream _ss;
 
  public:
   ~cm20_receiver();
@@ -97,6 +107,11 @@ class cm20_receiver {
   int get_psi_results_pir(std::vector<std::vector<oc::u32>> &result_output);
   int get_count() {
     return (_sender_size + _bucket2_send_hash - 1) / _bucket2_send_hash;
+  };
+  std::string get_time_point_info() {
+    _ss.clear(), _ss.str("");
+    _ss << " [time]:" << _tp.get_time_point_ms() << " ms";
+    return _ss.str();
   };
 };
 

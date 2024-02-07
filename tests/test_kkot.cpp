@@ -95,7 +95,7 @@ int main_test(int argc, char** argv) {
   }
   time_point tp;
   //
-  cout << "========== start time " << tp.get_time_piont_ms() << " ms" << endl;
+  cout << "========== start time " << tp.get_time_point_ms() << " ms" << endl;
   vector<vector<block>> out_masks;
   thread th1(test_kkot_sender, num_Ote, ref(out_masks), ref(param));
 
@@ -103,7 +103,7 @@ int main_test(int argc, char** argv) {
   thread th2(test_kkot_receiver, ref(choices), ref(out_dec_masks), ref(param));
   th1.join();
   th2.join();
-  cout << "========== end time " << tp.get_time_piont_ms() << " ms" << endl;
+  cout << "========== end time " << tp.get_time_point_ms() << " ms" << endl;
   //   check
   for (size_t i = 0; i < num_Ote; i++) {
     if (i < 10 && i < num_Ote) {
@@ -314,14 +314,14 @@ int main_test_ot_send_recv(int argc, char** argv) {
     choices[i] = rand() % N;
   }
   time_point tp;
-  cout << "========== start time " << tp.get_time_piont_ms() << " ms" << endl;
+  cout << "========== start time " << tp.get_time_point_ms() << " ms" << endl;
   thread th1(test_kkot_send<T>, num_Ote, ref(inputs), ref(param), N, bit_l);
   vector<T> out_data;
   thread th2(test_kkot_recv<T>, ref(choices), ref(out_data), ref(param), N,
              bit_l);
   th1.join();
   th2.join();
-  cout << "========== end time " << tp.get_time_piont_ms() << " ms" << endl;
+  cout << "========== end time " << tp.get_time_point_ms() << " ms" << endl;
   //   check
   for (size_t i = 0; i < num_Ote; i++) {
     if (i < 3 && i < num_Ote) {

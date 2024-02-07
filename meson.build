@@ -1,8 +1,8 @@
 project('crypto-protocal', 'cpp',
   version: '0.0.1',
   default_options: [
-    'buildtype=debug',
-    #'buildtype=release',
+    # 'buildtype=debug',
+    'buildtype=release',
     'default_library=static',
     'cpp_std=c++14',
     'warning_level=3'],
@@ -44,6 +44,7 @@ crypto_compile_args = [
 '-msse4.1',
 '-maes',
 '-mpclmul',
+'-fopenmp',
 # '-DPIR_QUERY',
 ]
 
@@ -59,6 +60,7 @@ cereal_dep = dependency('cereal')
 botan_dep = dependency('botan-2')
 # ntl_dep = dependency('ntl') # 自定义的pc文件 /root/vcpkg/installed/x64-linux/lib/pkgconfig/ntl.pc
 # coproto_dep = dependency('coproto')
+openmp_dep =dependency('openmp')
 
 crypto_dependencies = []
 # crypto_dependencies += absl_dep
@@ -72,6 +74,7 @@ crypto_dependencies += cereal_dep
 crypto_dependencies += botan_dep
 # crypto_dependencies += ntl_dep
 # crypto_dependencies += coproto_dep
+crypto_dependencies += openmp_dep
 
 subdir('src')
 subdir('tests')

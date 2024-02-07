@@ -318,13 +318,19 @@ int cm20_sender::recover_matrix_c(conn *sock, vector<block> &senderSet) {
     SPDLOG_LOGGER_INFO(spdlog::default_logger(), "cm20_sender,wlfBegin[{}]:{}",
                        j, infoArgs[j].wLeftBegin);
   }
-
+  int threadNum = this->_omp_num;
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "cm20_sender before process_recover_matrix_C:{}",
+                     get_time_point_info());
 #pragma omp parallel for num_threads(threadNum)
   for (int i = 0; i < omp_num; i++) {
     process_recover_matrix_C(infoArgs.data() + i);
   }
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "cm20_sender,并行处理恢复矩阵 C 结束 omp_num:{}", omp_num);
+  SPDLOG_LOGGER_INFO(spdlog::default_logger(),
+                     "cm20_sender after process_recover_matrix_C:{}",
+                     get_time_point_info());
   err_on_exit.dismiss();
   return 0;
 }

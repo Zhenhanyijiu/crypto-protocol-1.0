@@ -76,12 +76,12 @@ class time_point {
  public:
   time_point() { _n0 = std::chrono::steady_clock::now(); };
   ~time_point(){};
-  uint64_t get_time_piont_ms() {
+  uint64_t get_time_point_ms() {
     std::chrono::steady_clock::time_point n1 = std::chrono::steady_clock::now();
     auto dur = std::chrono::duration_cast<std::chrono::nanoseconds>(n1 - _n0);
     return ((uint64_t)dur.count()) / 1e6;
   };
-  double get_time_piont_s() {
+  double get_time_point_s() {
     std::chrono::steady_clock::time_point n1 = std::chrono::steady_clock::now();
     auto dur = std::chrono::duration_cast<std::chrono::nanoseconds>(n1 - _n0);
     return ((uint64_t)dur.count()) / 1e9 / 1.0;

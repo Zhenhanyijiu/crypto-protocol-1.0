@@ -51,7 +51,7 @@ void test_hasher(int hash_type) {
       break;
   }
   time_point tpoint;
-  //   uint64_t start_t = tpoint.get_time_piont_ms();
+  //   uint64_t start_t = tpoint.get_time_point_ms();
   //   oc::ROracle ro;
   for (int i = 0; i < 10000000; i++) {
     hh->hasher_reset();
@@ -60,7 +60,7 @@ void test_hasher(int hash_type) {
     hh->hasher_final(out, 32);
     // print_out((uint8_t *)out, 32);
   }
-  auto ret = tpoint.get_time_piont_ms();
+  auto ret = tpoint.get_time_point_ms();
   cout << all_type[hash_type] << " use time:" << ret << " ms" << endl;
 }
 

@@ -1,5 +1,6 @@
 #include "crypto-protocol/cm20.h"
 #include "crypto-protocol/fulog.h"
+#include "crypto-protocol/utils.h"
 #include "crypto-protocol/tcpsocket.h"
 #include "crypto-protocol/ot_interface.h"
 #include "cryptoTools/Common/Defines.h"
@@ -10,12 +11,12 @@ using namespace fucrypto;
 struct param {
   string common_seed = "0123456789abcdef";
   oc::u64 sender_size = 1000000;
-  oc::u64 matrix_width = 128;
-  oc::u64 log_height = 20;
+  oc::u64 matrix_width = 192;
+  oc::u64 log_height = 21;
   int thread_num = 1;
   oc::u64 hash2_length_in_bytes = 10;
   //   oc::u64 bucket2ForComputeH2Output = 256;
-  oc::u64 bucket2_send_hash = 200000;
+  oc::u64 bucket2_send_hash = sender_size;
   oc::u64 recver_size = 10000;
 };
 param default_param;
@@ -94,10 +95,15 @@ static void run_cm20_sender_pir(vector<block> &senderSet) {
                          default_param.thread_num,
                          default_param.hash2_length_in_bytes,
                          default_param.bucket2_send_hash);
+  cout << "======== before recover_matrix_c:"
+       << cm20sender.get_time_point_info() << endl;
   cm20sender.recover_matrix_c(&c, senderSet);
-  //   cout << "============== 1" << endl;
+  cout << "======== after  recover_matrix_c:"
+       << cm20sender.get_time_point_info() << endl;
+
   cm20sender.send_hash2_output(&c);
-  //   cout << "============== 2" << endl;
+  cout << "======== after  send_hash2_output:"
+       << cm20sender.get_time_point_info() << endl;
 }
 static void run_cm20_recver_pir(vector<block> &recverSet) {
   connection c(0, "127.0.0.1", 9300);
@@ -107,17 +113,24 @@ static void run_cm20_recver_pir(vector<block> &recverSet) {
       default_param.matrix_width, default_param.log_height,
       default_param.thread_num, default_param.hash2_length_in_bytes,
       default_param.bucket2_send_hash);
+  cout << "======== before u_a_d:" << cm20recver.get_time_point_info() << endl;
   cm20recver.gen_matrix_u_a_d(&c, recverSet);
+  cout << "======== after  u_a_d:" << cm20recver.get_time_point_info() << endl;
+
   //   cout << "============== 3" << endl;
   //   cm20recver.gen_hash_map();
   //   cout << "============== 4" << endl;
 
   cm20recver.recv_hash2_output_pir(&c);
+  cout << "======== after  recv_hash2_output_pir:"
+       << cm20recver.get_time_point_info() << endl;
+
   //   cout << "============== 5" << endl;
 
   vector<vector<u32>> psiResultsOutput;
   cm20recver.get_psi_results_pir(psiResultsOutput);
-  cout << "============== 6" << endl;
+  cout << "======== after  get_psi_results_pir:"
+       << cm20recver.get_time_point_info() << endl;
 
   cout << "=== psiResultsOutput.size:" << psiResultsOutput.size() << endl;
   for (size_t i = 0; i < 5; i++) {
@@ -129,16 +142,25 @@ static void run_cm20_recver_pir(vector<block> &recverSet) {
     }
   }
 }
-static void test_cm20_psi_pir() {
+static void test_cm20_psi_pir(int argc, char **argv) {
+  int role = 0;
+  if (argc > 1) {
+    role = atoi(argv[1]);
+  }
   vector<block> senderSet;
   vector<block> recverSet;
   get_data(senderSet, recverSet);
   cout << "=== sender_size:" << senderSet.size() << endl;
   cout << "=== recver_size:" << recverSet.size() << endl;
-  thread th1(run_cm20_sender_pir, ref(senderSet));
-  thread th2(run_cm20_recver_pir, ref(recverSet));
-  th1.join();
-  th2.join();
+  //   thread th1(run_cm20_sender_pir, ref(senderSet));
+  //   thread th2(run_cm20_recver_pir, ref(recverSet));
+  //   th1.join();
+  //   th2.join();
+  if (role == 0) {
+    run_cm20_recver_pir(recverSet);
+  } else {
+    run_cm20_sender_pir(senderSet);
+  }
 }
 
 // use set baset ot test psi
@@ -218,7 +240,7 @@ static void test_cm20_psi_set_base_ot() {
 int main(int argc, char **argv) {
   cout << "======= test cm20 ========" << endl;
   //   test_cm20_psi();
-  //   test_cm20_psi_pir();
-  test_cm20_psi_set_base_ot();
+  test_cm20_psi_pir(argc, argv);
+  //   test_cm20_psi_set_base_ot();
   return 0;
 }

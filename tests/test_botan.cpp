@@ -254,7 +254,7 @@ void test_bench_mul_little(const config_param& conf) {
     c->scalar_mul(k1.get(), G.get(), p1.get());
   }
   cout << "======== test_bench_mul_little little k use time:"
-       << tp.get_time_piont_ms() << " ms" << endl;
+       << tp.get_time_point_ms() << " ms" << endl;
 }
 void test_bench_mul_big(const config_param& conf) {
   time_point tp;
@@ -271,7 +271,7 @@ void test_bench_mul_big(const config_param& conf) {
     c->scalar_mul(k1.get(), G.get(), p1.get());
   }
   cout << "======== test_bench_mul_big big k use time:"
-       << tp.get_time_piont_ms() << " ms" << endl;
+       << tp.get_time_point_ms() << " ms" << endl;
 }
 
 void test_botan_point_encode(const config_param& conf) {
