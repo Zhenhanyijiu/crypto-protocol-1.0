@@ -43,7 +43,7 @@ static void batch_pir_client(std::vector<oc::block> &idno_array,
   string send_size_and_seed = sock->recv();                     // 4+16字节
   oc::u32 sender_size = *(oc::u32 *)send_size_and_seed.data();  // 4B
   std::string common_seed(send_size_and_seed.data() + 4, 16);   // 16B
-  //   接收公共参数结束
+  //   接收公共参数 end
   cm20_receiver cm20recver(common_seed, recver_size, sender_size, param->width,
                            param->log_height, param->omp_num, 10, STEP_LEN);
   vector<array<block, 2>> m_gens_pair(param->width);
@@ -51,12 +51,11 @@ static void batch_pir_client(std::vector<oc::block> &idno_array,
     m_gens_pair[i] = m_gens_pair_all[i];
   }
   cm20recver.set_base_ot(m_gens_pair);
-  //
+  // 设置base ot
   cm20recver.gen_matrix_u_a_d(sock, idno_array);
   cm20recver.recv_hash2_output_pir(sock);
   vector<vector<u32>> psiResultsOutput;
   cm20recver.get_psi_results_pir(psiResultsOutput);
-  cout << "============== 6" << endl;
   cout << "=== psiResultsOutput.size:" << psiResultsOutput.size() << endl;
   for (size_t i = 0; i < 5 && i < psiResultsOutput.size(); i++) {
     cout << "=== i:" << i << endl;
@@ -65,7 +64,31 @@ static void batch_pir_client(std::vector<oc::block> &idno_array,
       //   cout << "i2:" << i2 << psiResultsOutput[i][i2] << endl;
     }
   }
-  //   求交结束
+  //   求交 end
+  unordered_map<int, int> index_in_idarray_map;
+  vector<oc::u8> sigma(sender_size, 0);
+  for (size_t i = 0; i < psiResultsOutput.size(); i++) {
+    sigma[psiResultsOutput[i][1]] = 1;
+    index_in_idarray_map[psiResultsOutput[i][1]] = psiResultsOutput[i][0];
+  }
+  if (index_in_idarray_map.size() != psiResultsOutput.size()) {
+    string err_msg = "id repeat";
+    // return err_code_batch_pir;
+    return;
+  }
+  //   做 0-1 向量 end
+  oc::BitVector bit_vector_choices(sender_size);
+  oc::PRNG rng;
+  rng.SetSeed(oc::sysRandomSeed());
+  bit_vector_choices.randomize(rng);
+  auto ote2 = new_ote_receiver(param2);
+  vector<array<block, 2>> m_gens_pair2(128);
+  for (size_t i = param->width; i < param->width + 128; i++) {
+    m_gens_pair2[i] = m_gens_pair_all[i];
+  }
+  ote2->set_base_ot(m_gens_pair2);
+  std::vector<oc::block> single_keys;
+  ote2->receive(bit_vector_choices, single_keys, sock);
 }
 static void batch_pir_server(std::vector<oc::block> &idList,
                              const std::vector<std::string> &attrList,

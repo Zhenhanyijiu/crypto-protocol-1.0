@@ -32,7 +32,7 @@ int iknp_sender::set_base_ot(const oc::BitVector &base_choices,
   _has_base_ot = true;
   return 0;
 }
-int iknp_sender::send(std::vector<std::array<oc::block, 2>> &encMsgOutput,
+int iknp_sender::send(std::vector<std::array<oc::block, 2>> &pair_keys,
                       conn *sock) {
   if (_has_base_ot == false) {
     // np99receiver otbase;
@@ -55,7 +55,7 @@ int iknp_sender::send(std::vector<std::array<oc::block, 2>> &encMsgOutput,
   // const vector<block> &uBuffInputAll,
   //    vector<array<block, 2>> &encMsgOutput
   // round up
-  u64 numOtExt = roundUpTo(encMsgOutput.size(), 128);
+  u64 numOtExt = roundUpTo(pair_keys.size(), 128);
   u64 numSuperBlocks = (numOtExt / 128 + superBlkSize - 1) / superBlkSize;
   // u64 numSuperBlocks = (numOtExt / 128 + superBlkSize - 1) / superBlkSize;
   u64 step = std::min<u64>(numSuperBlocks, (u64)commStepSize);
@@ -73,7 +73,7 @@ int iknp_sender::send(std::vector<std::array<oc::block, 2>> &encMsgOutput,
       choiceMask[i] = ZeroBlock;
   }
 
-  auto mIter = encMsgOutput.begin();
+  auto mIter = pair_keys.begin();
 
   // block *uIter = (block *)u.data() + superBlkSize * 128 * commStepSize;
   int offset = 0;
@@ -144,7 +144,7 @@ int iknp_sender::send(std::vector<std::array<oc::block, 2>> &encMsgOutput,
     sse_transpose128x1024(t);
 
     auto mEnd =
-        mIter + std::min<u64>(128 * superBlkSize, encMsgOutput.end() - mIter);
+        mIter + std::min<u64>(128 * superBlkSize, pair_keys.end() - mIter);
     tIter = (block *)t.data();
     block *tEnd = (block *)t.data() + 128 * superBlkSize;
     while (mIter != mEnd) {
@@ -162,13 +162,13 @@ int iknp_sender::send(std::vector<std::array<oc::block, 2>> &encMsgOutput,
   std::array<block, 8> aesHashTemp;
 
   u64 doneIdx = 0;
-  u64 bb = (encMsgOutput.size() + 127) / 128;
+  u64 bb = (pair_keys.size() + 127) / 128;
   for (u64 blockIdx = 0; blockIdx < bb; ++blockIdx) {
-    u64 stop = std::min<u64>(encMsgOutput.size(), doneIdx + 128);
+    u64 stop = std::min<u64>(pair_keys.size(), doneIdx + 128);
 
     auto length = 2 * (stop - doneIdx);
     auto steps = length / 8;
-    block *mIter = encMsgOutput[doneIdx].data();
+    block *mIter = pair_keys[doneIdx].data();
     for (u64 i = 0; i < steps; ++i) {
       mAesFixedKey.ecbEncBlocks(mIter, 8, aesHashTemp.data());
       mIter[0] = mIter[0] ^ aesHashTemp[0];
@@ -212,9 +212,8 @@ int iknp_receiver::set_base_ot(
   _has_base_ot = true;
   return 0;
 }
-int iknp_receiver::receive(const oc::BitVector &choicesWidthInput,
-                           std::vector<oc::block> &recoverMsgWidthOutput,
-                           conn *sock) {
+int iknp_receiver::receive(const oc::BitVector &choices,
+                           std::vector<oc::block> &single_keys, conn *sock) {
   SPDLOG_LOGGER_INFO(spdlog::default_logger(),
                      "iknp_receiver::receive start ...");
   string err_info = "";
@@ -244,18 +243,18 @@ int iknp_receiver::receive(const oc::BitVector &choicesWidthInput,
   //   vector<block> &recoverMsgWidthOutput,
   //   vector<block> &uBuffOutputAll
   // iknp接收方实际输入的iknpote的个数
-  u64 rChoicesSize = choicesWidthInput.size();
+  u64 rChoicesSize = choices.size();
   if (rChoicesSize < 0) {
     return err_code_iknp;
   }
   //((60+128-1)/128)*128
-  u64 numOtExt = roundUpTo(choicesWidthInput.size(), 128);
+  u64 numOtExt = roundUpTo(choices.size(), 128);
   // numSuperBlocks与numOtExt有一定的对应关系
   u64 numSuperBlocks = (numOtExt / 128 + superBlkSize - 1) / superBlkSize;
   // numBlocks==8,16,24,...
   u64 numBlocks = numSuperBlocks * superBlkSize;
   BitVector choices2(numBlocks * 128);
-  choices2 = choicesWidthInput;
+  choices2 = choices;
   // 8*128为一个单位，不小于实际的输入长度rChoicesSize
   choices2.resize(numBlocks * 128);
   // 转化为block类型
@@ -270,8 +269,8 @@ int iknp_receiver::receive(const oc::BitVector &choicesWidthInput,
   std::array<std::array<block, superBlkSize>, 128> t0;
   // the index of the OT that has been completed.
   // 初始化recoverMsgWidthOutput大小
-  recoverMsgWidthOutput.resize(rChoicesSize);
-  auto mIter = recoverMsgWidthOutput.begin();
+  single_keys.resize(rChoicesSize);
+  auto mIter = single_keys.begin();
   u64 step = std::min<u64>(numSuperBlocks, (u64)commStepSize);
   // 初始化uBuffOutput大小 T_R_U
   vector<char> uBuffOut(numSuperBlocks * 128 * superBlkSize * 16);
@@ -348,8 +347,8 @@ int iknp_receiver::receive(const oc::BitVector &choicesWidthInput,
     // block* mStart = mIter;
     // block* mEnd = std::min<block*>(mIter + 128 * superBlkSize,
     // &*messages.end());
-    auto mEnd = mIter + std::min<u64>(128 * superBlkSize,
-                                      recoverMsgWidthOutput.end() - mIter);
+    auto mEnd =
+        mIter + std::min<u64>(128 * superBlkSize, single_keys.end() - mIter);
     tIter = (block *)t0.data();
     block *tEnd = (block *)t0.data() + 128 * superBlkSize;
     while (mIter != mEnd) {
@@ -370,13 +369,13 @@ int iknp_receiver::receive(const oc::BitVector &choicesWidthInput,
   std::array<block, 8> aesHashTemp;
 
   u64 doneIdx = (0);
-  u64 bb = (recoverMsgWidthOutput.size() + 127) / 128;
+  u64 bb = (single_keys.size() + 127) / 128;
   for (u64 blockIdx = 0; blockIdx < bb; ++blockIdx) {
-    u64 stop = std::min<u64>(recoverMsgWidthOutput.size(), doneIdx + 128);
+    u64 stop = std::min<u64>(single_keys.size(), doneIdx + 128);
 
     auto length = stop - doneIdx;
     auto steps = length / 8;
-    block *mIter = recoverMsgWidthOutput.data() + doneIdx;
+    block *mIter = single_keys.data() + doneIdx;
     for (u64 i = 0; i < steps; ++i) {
       mAesFixedKey.ecbEncBlocks(mIter, 8, aesHashTemp.data());
       mIter[0] = mIter[0] ^ aesHashTemp[0];
