@@ -6,12 +6,10 @@ int hash_num = 3;
 float factor = 1.27;
 
 static uint64_t get_rn() {
-  uint64_t n1 = rand();
-  uint64_t n2 = rand();
-  uint64_t n3 = rand();
-  return (n1 << 33) | (n2 << 2) | (n3 & 0x11);
+  return ((uint64_t)rand() << 33) | ((uint64_t)rand() << 2) |
+         ((uint64_t)rand() & 0x11);
 }
-
+namespace ENCRYPTO = fucrypto;
 static void print_cc_table(ENCRYPTO::CuckooTable& cc) {
   cout << "============== cc hash log ===============" << endl;
   auto vec_num = cc.GetNumOfElementsInBins();
@@ -72,7 +70,7 @@ static int test_sp(int argc, char** argv) {
   sp.SetNumOfHashFunctions(hash_num);
   sp.Insert(elements);
   sp.MapElements();
-  print_sp_table(sp);
+  //   print_sp_table(sp);
   return 0;
 }
 void test_get_rn() {
@@ -83,6 +81,6 @@ void test_get_rn() {
 int main(int argc, char** argv) {
   test_cc(argc, argv);
   test_sp(argc, argv);
-  test_get_rn();
+  //   test_get_rn();
   return 0;
 }

@@ -2,7 +2,7 @@
 
 #include <bits/stdc++.h>
 using namespace std;
-namespace ENCRYPTO {
+namespace fucrypto {
 constexpr auto DUMMY_ELEMENT = (uint64_t)-1LL;
 
 /// @brief
@@ -475,4 +475,4 @@ class SimpleTable : public HashingTable {
   };
 };
 
-}  // namespace ENCRYPTO
+}  // namespace fucrypto
