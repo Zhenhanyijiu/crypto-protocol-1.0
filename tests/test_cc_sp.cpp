@@ -1,7 +1,7 @@
 #include "crypto-protocol/cuckoo_simple_hash.h"
 #include <bits/stdc++.h>
 using namespace std;
-int ele_num = 10;
+int ele_num = 100;
 int hash_num = 3;
 float factor = 1.27;
 
@@ -70,7 +70,7 @@ static int test_sp(int argc, char** argv) {
   sp.SetNumOfHashFunctions(hash_num);
   sp.Insert(elements);
   sp.MapElements();
-  //   print_sp_table(sp);
+  print_sp_table(sp);
   return 0;
 }
 void test_get_rn() {

@@ -81,7 +81,10 @@ class HashingTable {
 /// @brief
 class HashTableEntry {
  public:
-  HashTableEntry() { global_id_ = value_ = DUMMY_ELEMENT; }
+  HashTableEntry() {
+    // global_id_ = DUMMY_ELEMENT;
+    // value_ = DUMMY_ELEMENT;
+  }
   HashTableEntry(std::uint64_t value, std::size_t global_id,
                  std::size_t num_of_functions, std::size_t num_of_bins) {
     value_ = value;
@@ -131,9 +134,9 @@ class HashTableEntry {
  private:
   std::size_t num_of_hash_functions_;
   std::size_t num_of_bins_;
-  std::size_t global_id_;
-  uint64_t value_;
-  std::size_t current_function_id_;
+  std::size_t global_id_ = DUMMY_ELEMENT;
+  uint64_t value_ = DUMMY_ELEMENT;
+  std::size_t current_function_id_ = 0;
   std::vector<std::size_t> possible_addresses_;
 };
 
@@ -205,6 +208,8 @@ class CuckooTable : public HashingTable {
     std::vector<uint64_t> raw_table;
     raw_table.reserve(num_bins_);
     for (auto i = 0ull; i < num_bins_; ++i) {
+      //   cout << "### i:" << i << ",v:" << hash_table_.at(i).GetElement()
+      //        << ",fid:" << hash_table_.at(i).GetCurrentFunctinId() << endl;
       raw_table.push_back(
           hash_table_.at(i).GetElement() ^
           static_cast<uint64_t>(hash_table_.at(i).GetCurrentFunctinId()));
@@ -289,15 +294,22 @@ class CuckooTable : public HashingTable {
       current_entry.SetCurrentAddress(0);
       std::swap(current_entry,
                 hash_table_.at(current_entry.GetCurrentAddress()));
+      //   cout << ">>> element_id:" << element_id
+      //        << ",val:" << current_entry.GetElement() << endl;
       for (auto recursion_step = 0ull; !current_entry.IsEmpty();
            ++recursion_step) {
+        // cout << "=== cc recursion_step:" << recursion_step
+        //      << ",val:" << current_entry.GetElement() << endl;
+
         if (recursion_step > recursion_limiter_) {
           stash_.push_back(current_entry);
+          cout << "======== cc create error ======" << endl;
+          exit(0);
           break;
         } else {
           ++statistics_.recursive_remappings_counter_;
           current_entry.IterateFunctionNumber();
-          current_entry.GetCurrentAddress();
+          //   current_entry.GetCurrentAddress();
           std::swap(current_entry,
                     hash_table_.at(current_entry.GetCurrentAddress()));
         }
