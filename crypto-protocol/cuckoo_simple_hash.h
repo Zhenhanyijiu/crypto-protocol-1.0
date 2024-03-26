@@ -23,6 +23,7 @@ class HashingTable {
     return true;
   };
   //   static std::uint64_t ElementToHash(std::uint64_t element);
+
  protected:
   HashingTable() = default;
   std::vector<std::uint64_t> elements_;
@@ -249,6 +250,24 @@ class CuckooTable : public HashingTable {
   };
   int GetCurrentFunctinId(int bin_id) const {
     return hash_table_.at(bin_id).GetCurrentFunctinId();
+  };
+  std::vector<uint64_t> GetElementAddresses() {
+    std::vector<uint64_t> hash_addresses;
+    hash_addresses.resize(elements_.size() * num_of_hash_functions_);
+    AllocateLUTs();
+    GenerateLUTs();
+    for (auto i = 0ull; i < elements_.size(); ++i) {
+      HashTableEntry current_entry(elements_.at(i), i, num_of_hash_functions_,
+                                   num_bins_);
+      auto addresses = HashToPosition(elements_.at(i));
+      current_entry.SetPossibleAddresses(std::move(addresses));
+      for (auto j = 0ull; j < num_of_hash_functions_; ++j) {
+        // current_entry.SetCurrentAddress(j);
+        hash_addresses[i * num_of_hash_functions_ + j] =
+            current_entry.GetAddressAt(j);
+      }
+    }
+    return hash_addresses;
   };
 
  private:
