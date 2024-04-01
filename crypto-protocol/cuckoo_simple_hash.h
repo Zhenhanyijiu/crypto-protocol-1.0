@@ -218,6 +218,19 @@ class CuckooTable : public HashingTable {
     }
     return raw_table;
   };
+
+  void ObtainEntryValues(std::vector<uint64_t>& raw_table) const {
+    // std::vector<uint64_t> raw_table;
+    raw_table.reserve(num_bins_);
+    for (auto i = 0ull; i < num_bins_; ++i) {
+      //   cout << "### i:" << i << ",v:" << hash_table_.at(i).GetElement()
+      //        << ",fid:" << hash_table_.at(i).GetCurrentFunctinId() << endl;
+      raw_table.push_back(
+          hash_table_.at(i).GetElement() ^
+          static_cast<uint64_t>(hash_table_.at(i).GetCurrentFunctinId()));
+      // raw_table.push_back(hash_table_.at(i).GetElement());
+    }
+  };
   std::vector<uint64_t> ObtainEntryIds() const {
     std::vector<uint64_t> id_table;
     id_table.reserve(num_bins_);
@@ -432,6 +445,21 @@ class SimpleTable : public HashingTable {
       }
     }
     return raw_table;
+  };
+
+  void ObtainBinEntryValues(
+      std::vector<std::vector<uint64_t>>& raw_table) const {
+    // std::vector<std::vector<uint64_t>> raw_table(num_bins_);
+    raw_table.resize(num_bins_);
+    for (auto i = 0ull; i < num_bins_; ++i) {
+      for (auto j = 0ull; j < hash_table_.at(i).size(); ++j) {
+        raw_table.at(i).push_back(
+            hash_table_.at(i).at(j).GetElement() ^
+            static_cast<uint64_t>(
+                hash_table_.at(i).at(j).GetCurrentFunctinId()));
+        //   raw_table.at(i).push_back(hash_table_.at(i).at(j).GetElement());
+      }
+    }
   };
   std::vector<std::vector<uint64_t>> ObtainBinEntryIds() const {
     std::vector<std::vector<uint64_t>> id_table(num_bins_);
